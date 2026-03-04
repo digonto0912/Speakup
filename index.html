@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpeakUp — Free English Partner</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SpeakUp">
+<meta name="theme-color" content="#e8c97a">
+<link rel="apple-touch-icon" href="icon.svg">
+<script src="https://js.puter.com/v2/"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --card: #1a1f2e;
+    --border: #262c3e;
+    --accent: #e8c97a;
+    --accent2: #7ab8e8;
+    --text: #e8e4d9;
+    --muted: #6b7280;
+    --user-bubble: #1e2a42;
+    --ai-bubble: #1f1a10;
+    --online: #4ade80;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 10px;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--accent); }
+  .logo span { font-style: italic; color: var(--text); }
+
+  .persona-selector { display: flex; gap: 6px; }
+  .persona-btn {
+    padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-size: 0.7rem;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+  }
+  .persona-btn.active, .persona-btn:hover { border-color: var(--accent); color: var(--accent); background: #e8c97a12; }
+
+  .partner-info { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #e8c97a33, #7ab8e833);
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+  }
+  .partner-details { text-align: right; }
+  .partner-name { font-size: 0.82rem; font-weight: 500; }
+  .partner-status { font-size: 0.7rem; color: var(--online); display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--online); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .scenario-bar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 8px 16px; display: flex; gap: 7px; overflow-x: auto;
+    flex-shrink: 0; scrollbar-width: none;
+  }
+  .scenario-bar::-webkit-scrollbar { display: none; }
+  .scenario-chip {
+    white-space: nowrap; padding: 5px 13px; border-radius: 20px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    font-size: 0.7rem; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .scenario-chip.active, .scenario-chip:hover { border-color: var(--accent2); color: var(--accent2); background: #7ab8e812; }
+
+  .score-bar {
+    display: flex; justify-content: center; gap: 18px; padding: 5px;
+    background: var(--card); border-bottom: 1px solid var(--border);
+    font-size: 0.7rem; color: var(--muted); flex-shrink: 0;
+  }
+  .score-bar span { color: var(--accent); font-weight: 500; }
+
+  #chat {
+    flex: 1; overflow-y: auto; padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  #chat::-webkit-scrollbar { width: 3px; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .message { display: flex; gap: 9px; max-width: 86%; animation: slideIn 0.22s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+  .message.user { align-self: flex-end; flex-direction: row-reverse; }
+  .message.ai { align-self: flex-start; }
+
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--card);
+    border: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: center; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;
+  }
+  .bubble { padding: 11px 15px; border-radius: 17px; font-size: 0.88rem; line-height: 1.6; }
+  .message.ai .bubble { background: var(--ai-bubble); border: 1px solid #3a2e1a; border-bottom-left-radius: 4px; }
+  .message.user .bubble { background: var(--user-bubble); border: 1px solid #1e3358; border-bottom-right-radius: 4px; }
+
+  .correction-tag {
+    display: block; margin-top: 8px; padding: 6px 10px;
+    background: #1a1200; border: 1px solid #3d2e00; border-radius: 8px;
+    font-size: 0.74rem; color: var(--accent); line-height: 1.5;
+  }
+  .correction-tag strong { color: #f59e0b; }
+
+  .typing-bubble {
+    background: var(--ai-bubble); border: 1px solid #3a2e1a;
+    border-radius: 17px; border-bottom-left-radius: 4px;
+    padding: 13px 17px; display: flex; gap: 5px; align-items: center;
+  }
+  .dot-t { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: bounce 1.2s infinite; }
+  .dot-t:nth-child(2){animation-delay:0.2s} .dot-t:nth-child(3){animation-delay:0.4s}
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  .input-area {
+    padding: 12px 14px 16px; background: var(--surface);
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .input-row { display: flex; gap: 9px; align-items: flex-end; max-width: 740px; margin: 0 auto; }
+  #userInput {
+    flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 13px;
+    padding: 11px 15px; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem; resize: none; min-height: 46px; max-height: 120px;
+    outline: none; transition: border-color 0.2s; line-height: 1.5;
+  }
+  #userInput:focus { border-color: var(--accent); }
+  #userInput::placeholder { color: var(--muted); }
+  #sendBtn {
+    width: 46px; height: 46px; border-radius: 13px; background: var(--accent);
+    border: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1rem; transition: all 0.2s; flex-shrink: 0;
+  }
+  #sendBtn:hover { background: #f0d48a; transform: scale(1.05); }
+  #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .input-hint { text-align: center; font-size: 0.66rem; color: var(--muted); margin-top: 6px; }
+
+  /* Free badge */
+  .free-badge {
+    background: #0d2010; border: 1px solid #1a4a20; color: #4ade80;
+    font-size: 0.65rem; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+  }
+
+  @media(max-width:600px){
+    .persona-selector{display:none}
+    header{padding:9px 12px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">Speak<span>Up</span></div>
+    <div class="free-badge">✦ 100% FREE</div>
+  </div>
+  <div class="persona-selector">
+    <button class="persona-btn active" onclick="setPersona('casual',this)">☕ Casual</button>
+    <button class="persona-btn" onclick="setPersona('professional',this)">💼 Pro</button>
+    <button class="persona-btn" onclick="setPersona('academic',this)">📚 Academic</button>
+  </div>
+  <div class="partner-info">
+    <div class="partner-details">
+      <div class="partner-name" id="partnerName">Alex (New York)</div>
+      <div class="partner-status"><span class="dot"></span> online now</div>
+    </div>
+    <div class="avatar" id="partnerAvatar">🧑</div>
+  </div>
+</header>
+
+<div class="score-bar">
+  <div>Messages: <span id="msgCount">0</span></div>
+  <div>Corrections: <span id="corrCount">0</span></div>
+  <div>Session: <span id="sessionTime">0:00</span></div>
+</div>
+
+<div class="scenario-bar">
+  <button class="scenario-chip active" onclick="setScenario(this,'free')">💬 Free Chat</button>
+  <button class="scenario-chip" onclick="setScenario(this,'job_interview')">🎯 Job Interview</button>
+  <button class="scenario-chip" onclick="setScenario(this,'cafe')">☕ At a Café</button>
+  <button class="scenario-chip" onclick="setScenario(this,'debate')">🗣️ Debate</button>
+  <button class="scenario-chip" onclick="setScenario(this,'storytelling')">📖 Storytelling</button>
+  <button class="scenario-chip" onclick="setScenario(this,'travel')">✈️ Travel</button>
+  <button class="scenario-chip" onclick="setScenario(this,'news')">📰 Discuss News</button>
+</div>
+
+<div id="chat"></div>
+
+<div class="input-area">
+  <div class="input-row">
+    <textarea id="userInput" placeholder="Type in English and press Enter..." rows="1"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
+  <div class="input-hint">Enter to send · Shift+Enter for new line · Powered by Puter.js (free forever)</div>
+</div>
+
+<script>
+const PERSONAS = {
+  casual:       { name:"Alex (New York)",   emoji:"🧑", style:"casual American friend from New York" },
+  professional: { name:"Sarah (London)",    emoji:"👩", style:"professional British colleague from London" },
+  academic:     { name:"James (Boston)",    emoji:"🧔", style:"academic professor from Boston" }
+};
+
+const SCENARIOS = {
+  free:          "Have a natural free-flowing conversation about anything the user wants.",
+  job_interview: "You are the interviewer. Ask professional job interview questions about their background and skills.",
+  cafe:          "You're both at a cozy café. Chat casually about life, hobbies, weekend plans.",
+  debate:        "Pick an interesting topic and have a healthy debate. Encourage the user to argue their side.",
+  storytelling:  "Take turns building a story together. You start, they continue, you add more.",
+  travel:        "You just returned from a trip. Share your experience and ask about their travel dreams.",
+  news:          "Discuss current topics — technology, society, culture. Ask their opinion and share yours."
+};
+
+let currentPersona = 'casual';
+let currentScenario = 'free';
+let conversationHistory = [];
+let msgCount = 0, corrCount = 0;
+let isLoading = false;
+let sessionStart = Date.now();
+
+setInterval(() => {
+  const s = Math.floor((Date.now()-sessionStart)/1000);
+  document.getElementById('sessionTime').textContent = `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+}, 1000);
+
+function buildSystemPrompt() {
+  const p = PERSONAS[currentPersona];
+  const s = SCENARIOS[currentScenario];
+  return `You are ${p.name}, a native English speaker — a ${p.style}. The user is practicing English with you.
+
+SCENARIO: ${s}
+
+YOUR RULES (never break these):
+1. Always respond as ${p.name}, a real human. NEVER act like an AI assistant.
+2. Keep replies SHORT and conversational — 2 to 4 sentences max. Like real spoken English.
+3. NEVER say "I'm an AI", "I'm here to help", or anything assistant-like. You're a person.
+4. If the user makes a grammar mistake, wrong word, or unnatural sentence — correct it gently at the END of your reply using this exact format:
+   [CORRECTION: "what they said" → "correct version" — short tip why]
+5. Keep the conversation flowing. Ask follow-up questions. React naturally. Show personality.
+6. Use natural spoken English — contractions, casual reactions like "Oh wow!", "No way!", "Honestly..."
+7. Remember everything said in this conversation and refer back to it naturally.
+8. NEVER go off topic from the scenario. Stay fully in character at all times.`;
+}
+
+function setPersona(persona, btn) {
+  currentPersona = persona;
+  document.querySelectorAll('.persona-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('partnerName').textContent = PERSONAS[persona].name;
+  document.getElementById('partnerAvatar').textContent = PERSONAS[persona].emoji;
+  resetChat();
+}
+
+function setScenario(btn, scenario) {
+  currentScenario = scenario;
+  document.querySelectorAll('.scenario-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  resetChat();
+}
+
+function resetChat() {
+  conversationHistory = [];
+  document.getElementById('chat').innerHTML = '';
+  startConversation();
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+}
+
+function appendMessage(role, html, isHTML=false) {
+  const chat = document.getElementById('chat');
+  const p = PERSONAS[currentPersona];
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = role === 'ai' ? p.emoji : '🙂';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (isHTML) bubble.innerHTML = html;
+  else bubble.textContent = html;
+  div.appendChild(av);
+  div.appendChild(bubble);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = 'message ai'; div.id = 'typing';
+  const av = document.createElement('div');
+  av.className = 'msg-avatar';
+  av.textContent = PERSONAS[currentPersona].emoji;
+  const bubble = document.createElement('div');
+  bubble.className = 'typing-bubble';
+  bubble.innerHTML = '<div class="dot-t"></div><div class="dot-t"></div><div class="dot-t"></div>';
+  div.appendChild(av); div.appendChild(bubble);
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function renderAIMessage(text) {
+  const corrMatch = text.match(/\[CORRECTION:(.*?)\]/s);
+  let mainText = text.replace(/\[CORRECTION:.*?\]/s, '').trim();
+  let html = escapeHtml(mainText);
+  if (corrMatch) {
+    corrCount++;
+    document.getElementById('corrCount').textContent = corrCount;
+    html += `<span class="correction-tag">✏️ <strong>Quick tip:</strong> ${escapeHtml(corrMatch[1].trim())}</span>`;
+  }
+  appendMessage('ai', html, true);
+}
+
+async function startConversation() {
+  showTyping();
+  const systemMsg = { role: "system", content: buildSystemPrompt() };
+  const firstMsg = { role: "user", content: "Start the conversation. Introduce yourself briefly and open the topic based on the scenario. Keep it short and natural." };
+
+  try {
+    const response = await puter.ai.chat([systemMsg, firstMsg], { model: "gpt-4o-mini" });
+    const text = typeof response === 'string' ? response : response?.message?.content || response?.content || "Hey! Ready to chat?";
+    removeTyping();
+    conversationHistory.push({ role: "assistant", content: text });
+    renderAIMessage(text);
+  } catch(e) {
+    removeTyping();
+    const p = PERSONAS[currentPersona];
+    appendMessage('ai', `Hey! I'm ${p.name}. Ready to chat — what's on your mind?`);
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  input.value = ''; input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  msgCount++;
+  document.getElementById('msgCount').textContent = msgCount;
+  appendMessage('user', text);
+  conversationHistory.push({ role: "user", content: text });
+  showTyping();
+
+  try {
+    const systemMsg = { role: "system", content: buildSystemPrompt() };
+    const messages = [systemMsg, ...conversationHistory];
+    const response = await puter.ai.chat(messages, { model: "gpt-4o-mini" });
+    const reply = typeof response === 'string' ? response : response?.message?.content || response?.content || "That's interesting! Tell me more.";
+    removeTyping();
+    conversationHistory.push({ role: "assistant", content: reply });
+    renderAIMessage(reply);
+  } catch(e) {
+    removeTyping();
+    appendMessage('ai', "Hmm, something went wrong. Try again!");
+    conversationHistory.pop();
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+document.getElementById('userInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+document.getElementById('userInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// Start
+startConversation();
+</script>
+</body>
+</html>
