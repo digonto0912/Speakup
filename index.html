@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="SpeakUp">
 <meta name="theme-color" content="#e8c97a">
 <link rel="apple-touch-icon" href="icon.svg">
-<script src="https://js.puter.com/v2/"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -209,7 +209,7 @@
     <textarea id="userInput" placeholder="Type in English and press Enter..." rows="1"></textarea>
     <button id="sendBtn" onclick="sendMessage()">➤</button>
   </div>
-  <div class="input-hint">Enter to send · Shift+Enter for new line · Powered by Puter.js (free forever)</div>
+  <div class="input-hint">Enter to send · Shift+Enter for new line · Powered by LLM7.io (free, no login, no popup)</div>
 </div>
 
 <script>
@@ -342,8 +342,13 @@ async function startConversation() {
   const firstMsg = { role: "user", content: "Start the conversation. Introduce yourself briefly and open the topic based on the scenario. Keep it short and natural." };
 
   try {
-    const response = await puter.ai.chat([systemMsg, firstMsg], { model: "gpt-4o-mini" });
-    const text = typeof response === 'string' ? response : response?.message?.content || response?.content || "Hey! Ready to chat?";
+    const res = await fetch("https://api.llm7.io/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer unused" },
+      body: JSON.stringify({ model: "gpt-4o-mini-2024-07-18", messages: [systemMsg, firstMsg], max_tokens: 300 })
+    });
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || "Hey! Ready to chat?";
     removeTyping();
     conversationHistory.push({ role: "assistant", content: text });
     renderAIMessage(text);
@@ -371,8 +376,13 @@ async function sendMessage() {
   try {
     const systemMsg = { role: "system", content: buildSystemPrompt() };
     const messages = [systemMsg, ...conversationHistory];
-    const response = await puter.ai.chat(messages, { model: "gpt-4o-mini" });
-    const reply = typeof response === 'string' ? response : response?.message?.content || response?.content || "That's interesting! Tell me more.";
+    const res = await fetch("https://api.llm7.io/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer unused" },
+      body: JSON.stringify({ model: "gpt-4o-mini-2024-07-18", messages, max_tokens: 300 })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || "That's interesting! Tell me more.";
     removeTyping();
     conversationHistory.push({ role: "assistant", content: reply });
     renderAIMessage(reply);
