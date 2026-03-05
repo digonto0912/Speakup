@@ -3,399 +3,227 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Buddy — Your English Friend</title>
+<title>Buddy — English Coach</title>
 <link rel="manifest" href="manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Buddy">
-<meta name="theme-color" content="#0f0a1e">
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#111b21">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0b0914;
-  --surface: #120f1f;
-  --card: #1a1630;
-  --border: #2a2445;
-  --accent: #c084fc;
-  --accent2: #f472b6;
-  --accent3: #67e8f9;
-  --text: #ede9f8;
-  --muted: #6b6490;
-  --user-bubble: #1e1a3a;
-  --ai-bubble: #160f2a;
-  --online: #4ade80;
-  --glow: rgba(192,132,252,0.15);
-}
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body { height:100%; overflow:hidden; }
-body {
-  font-family:'Nunito',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-  display:flex;
-  flex-direction:column;
-  height:100dvh;
-  position:relative;
-}
-
-/* Ambient background */
-body::before {
-  content:'';
-  position:fixed;
-  top:-30%;left:-20%;
-  width:60%;height:60%;
-  background:radial-gradient(ellipse,rgba(192,132,252,0.08) 0%,transparent 70%);
-  pointer-events:none;z-index:0;
-}
-body::after {
-  content:'';
-  position:fixed;
-  bottom:-20%;right:-10%;
-  width:50%;height:50%;
-  background:radial-gradient(ellipse,rgba(244,114,182,0.06) 0%,transparent 70%);
-  pointer-events:none;z-index:0;
-}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#111b21}
+body{font-family:'Nunito',sans-serif;color:#e9edef;display:flex;flex-direction:column;height:100dvh}
 
 /* HEADER */
-header {
-  position:relative;z-index:10;
-  padding:12px 18px;
-  background:rgba(18,15,31,0.95);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  flex-shrink:0;
+.top-bar{
+  background:#1f2c34;padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;border-bottom:1px solid #2a3942;
 }
-
-.logo-area { display:flex; align-items:center; gap:10px; }
-.logo-icon {
+.buddy-pill{display:flex;align-items:center;gap:8px}
+.buddy-face{
   width:38px;height:38px;border-radius:50%;
-  background:linear-gradient(135deg,#c084fc,#f472b6);
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.1rem;
-  box-shadow:0 0 16px rgba(192,132,252,0.4);
+  background:linear-gradient(135deg,#00a884,#025c4c);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  box-shadow:0 0 12px rgba(0,168,132,0.3);position:relative;
 }
-.logo-text { font-family:'Lora',serif; font-size:1.3rem; color:var(--text); letter-spacing:-0.3px; }
-.logo-text span { font-style:italic; color:var(--accent); }
-.logo-sub { font-size:0.62rem; color:var(--muted); margin-top:-2px; letter-spacing:0.5px; }
+.buddy-face.speaking::after{
+  content:'';position:absolute;width:100%;height:100%;border-radius:50%;
+  border:3px solid #00a884;animation:speakRing 1s infinite ease-out;
+}
+@keyframes speakRing{0%{transform:scale(1);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+.buddy-info .name{font-size:.9rem;font-weight:700;color:#e9edef}
+.buddy-info .status{font-size:.65rem;color:#8696a0}
+.buddy-info .status.on{color:#00a884}
+.buddy-info .status.speaking{color:#53bdeb}
+.buddy-info .status.thinking{color:#ffd279}
+.buddy-info .status.listening{color:#f15c6d}
 
-.buddy-status {
-  display:flex;align-items:center;gap:8px;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:30px;
-  padding:6px 12px 6px 8px;
+/* SCORE STRIP */
+.score-strip{
+  background:#111b21;padding:8px 14px;
+  display:flex;gap:0;border-bottom:1px solid #2a3942;flex-shrink:0;
 }
-.buddy-avatar {
-  width:30px;height:30px;border-radius:50%;
-  background:linear-gradient(135deg,#c084fc33,#f472b633);
-  border:2px solid var(--accent);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.9rem;
-  position:relative;
-}
-.buddy-avatar::after {
-  content:'';position:absolute;bottom:0;right:0;
-  width:8px;height:8px;border-radius:50%;
-  background:var(--online);
-  border:2px solid var(--surface);
-}
-.buddy-info { line-height:1.2; }
-.buddy-name { font-size:0.78rem; font-weight:600; color:var(--text); }
-.buddy-mood { font-size:0.62rem; color:var(--accent); }
+.sc{flex:1;text-align:center;border-right:1px solid #2a3942}
+.sc:last-child{border-right:none}
+.sc-num{font-size:1.1rem;font-weight:800;color:#00a884}
+.sc-lbl{font-size:.58rem;color:#8696a0;margin-top:1px;letter-spacing:.3px}
 
-.header-actions { display:flex; gap:6px; align-items:center; }
-.icon-btn {
-  width:34px;height:34px;border-radius:10px;
-  border:1px solid var(--border);background:transparent;
-  color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.85rem;transition:all 0.2s;
+/* MODE TABS */
+.mode-tabs{
+  background:#1f2c34;padding:6px 12px;
+  display:flex;gap:6px;border-bottom:1px solid #2a3942;flex-shrink:0;
 }
-.icon-btn:hover { color:var(--accent);border-color:var(--accent);background:var(--glow); }
-
-/* SCENARIO PILLS */
-.scenario-bar {
-  position:relative;z-index:10;
-  padding:8px 14px;
-  display:flex;gap:6px;overflow-x:auto;
-  flex-shrink:0;
-  background:rgba(11,9,20,0.8);
-  border-bottom:1px solid var(--border);
-  scrollbar-width:none;
+.m-tab{
+  padding:5px 13px;border-radius:20px;border:1px solid #2a3942;
+  background:transparent;color:#8696a0;font-size:.68rem;
+  font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;
 }
-.scenario-bar::-webkit-scrollbar { display:none; }
-.s-pill {
-  white-space:nowrap;padding:5px 13px;border-radius:20px;
-  border:1px solid var(--border);background:transparent;
-  color:var(--muted);font-size:0.68rem;
-  cursor:pointer;font-family:'Nunito',sans-serif;
-  transition:all 0.2s;flex-shrink:0;font-weight:500;
-}
-.s-pill.active { border-color:var(--accent);color:var(--accent);background:rgba(192,132,252,0.1); }
-.s-pill:hover { border-color:var(--accent2);color:var(--accent2); }
+.m-tab.active{border-color:#00a884;color:#00a884;background:rgba(0,168,132,.1)}
 
 /* CHAT */
-#chat {
-  flex:1;overflow-y:auto;
-  padding:16px 14px 8px;
-  display:flex;flex-direction:column;gap:12px;
-  position:relative;z-index:5;
-  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+#chat{
+  flex:1;overflow-y:auto;padding:10px 12px 6px;
+  display:flex;flex-direction:column;gap:6px;
+  background:#111b21;scrollbar-width:none;
 }
-#chat::-webkit-scrollbar { width:3px; }
-#chat::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+#chat::-webkit-scrollbar{display:none}
 
-/* Date divider */
-.date-divider {
-  text-align:center;font-size:0.62rem;color:var(--muted);
-  letter-spacing:1px;text-transform:uppercase;
-  display:flex;align-items:center;gap:10px;
-}
-.date-divider::before,.date-divider::after {
-  content:'';flex:1;height:1px;background:var(--border);
-}
+.msg{display:flex;max-width:86%}
+.msg.ai{align-self:flex-start}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.bubble{padding:8px 12px 6px;border-radius:8px;font-size:.875rem;line-height:1.6}
+.msg.ai .bubble{background:#1f2c34;border-top-left-radius:0;color:#e9edef}
+.msg.user .bubble{background:#005c4b;border-top-right-radius:0;color:#e9edef}
+.msg-time{font-size:.58rem;color:#8696a0;float:right;margin-left:8px;margin-top:4px}
 
-.message { display:flex;gap:8px;max-width:88%;animation:msgIn 0.28s cubic-bezier(0.34,1.56,0.64,1); }
-@keyframes msgIn { from{opacity:0;transform:translateY(10px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
-.message.user { align-self:flex-end;flex-direction:row-reverse; }
-.message.ai { align-self:flex-start; }
+/* CORRECTION CARD — stops the flow */
+.correction-card{
+  background:#1a1200;border:1px solid #3d2e00;border-radius:10px;
+  padding:10px 12px;margin:2px 0;align-self:stretch;
+  animation:cardIn .3s ease;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.correction-card .cc-label{font-size:.62rem;color:#ffd279;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.correction-card .wrong{color:#f87171;font-size:.82rem;text-decoration:line-through;margin-bottom:3px}
+.correction-card .right{color:#4ade80;font-size:.88rem;font-weight:600;margin-bottom:4px}
+.correction-card .why{font-size:.72rem;color:#8696a0;margin-bottom:8px}
+.repeat-btn{
+  width:100%;padding:7px;border-radius:8px;border:none;cursor:pointer;
+  background:#005c4b;color:#00a884;font-family:'Nunito',sans-serif;
+  font-size:.78rem;font-weight:700;transition:all .2s;
+}
+.repeat-btn:hover{background:#006d5a}
+.repeat-btn.done{background:#0a2a1a;color:#4ade80}
 
-.msg-ava {
-  width:28px;height:28px;border-radius:50%;
-  background:linear-gradient(135deg,#c084fc22,#f472b622);
-  border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:0.8rem;flex-shrink:0;margin-top:auto;
+/* REPORT CARD */
+.report-card{
+  background:#1f2c34;border:1px solid #2a3942;border-radius:12px;
+  padding:14px;margin:4px 0;align-self:stretch;
 }
-.message.user .msg-ava { background:linear-gradient(135deg,#1e3a5f,#1a2a50); }
+.report-card .r-title{font-size:.8rem;font-weight:800;color:#00a884;margin-bottom:10px;letter-spacing:.3px}
+.report-card .r-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #2a3942;font-size:.75rem}
+.report-card .r-row:last-child{border-bottom:none}
+.report-card .r-key{color:#8696a0}
+.report-card .r-val{color:#e9edef;font-weight:600}
+.fluency-bar{height:6px;background:#2a3942;border-radius:3px;margin-top:8px;overflow:hidden}
+.fluency-fill{height:100%;background:linear-gradient(90deg,#00a884,#4ade80);border-radius:3px;transition:width 1s ease}
 
-.bubble {
-  padding:10px 14px;
-  border-radius:18px;
-  font-size:0.875rem;
-  line-height:1.65;
-  position:relative;
-}
-.message.ai .bubble {
-  background:var(--ai-bubble);
-  border:1px solid rgba(192,132,252,0.15);
-  border-bottom-left-radius:4px;
-  box-shadow:0 2px 12px rgba(0,0,0,0.3);
-}
-.message.user .bubble {
-  background:linear-gradient(135deg,#1e1a3a,#251f45);
-  border:1px solid rgba(103,232,249,0.12);
-  border-bottom-right-radius:4px;
-  box-shadow:0 2px 12px rgba(0,0,0,0.3);
-}
-
-/* Correction */
-.fix-tag {
-  display:block;margin-top:8px;padding:7px 11px;
-  background:rgba(251,191,36,0.06);
-  border:1px solid rgba(251,191,36,0.2);
-  border-radius:10px;font-size:0.73rem;
-  color:#fbbf24;line-height:1.5;
-}
-.fix-tag strong { color:#f59e0b; }
-
-/* Typing */
-.typing-wrap { display:flex;gap:8px;align-self:flex-start;max-width:88%; }
-.typing-bubble {
-  background:var(--ai-bubble);
-  border:1px solid rgba(192,132,252,0.15);
-  border-radius:18px;border-bottom-left-radius:4px;
-  padding:12px 16px;display:flex;gap:5px;align-items:center;
-}
-.td { width:6px;height:6px;border-radius:50%;background:var(--accent);animation:td 1.4s infinite ease-in-out; }
+/* TYPING */
+.typing-wrap{align-self:flex-start}
+.typing-bubble{background:#1f2c34;border-radius:8px;border-top-left-radius:0;padding:12px 16px;display:flex;gap:4px;align-items:center}
+.td{width:7px;height:7px;border-radius:50%;background:#00a884;animation:td 1.4s infinite}
 .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
-@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-7px);opacity:1}}
+@keyframes td{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
 
-/* VOICE AREA — the heart of the UI */
-.voice-area {
-  position:relative;z-index:10;
-  background:rgba(18,15,31,0.97);
-  backdrop-filter:blur(20px);
-  border-top:1px solid var(--border);
-  padding:14px 16px 18px;
-  flex-shrink:0;
+/* CALL BAR */
+.call-bar{
+  background:#1f2c34;border-top:1px solid #2a3942;
+  padding:14px 20px 20px;flex-shrink:0;
 }
+.waveform{display:flex;justify-content:center;align-items:center;gap:3px;height:28px;margin-bottom:12px;opacity:0;transition:opacity .3s}
+.waveform.on{opacity:1}
+.bar{width:3px;border-radius:3px;background:#00a884;animation:bv .8s infinite ease-in-out}
+.bar:nth-child(1){height:6px;animation-delay:0s}.bar:nth-child(2){height:12px;animation-delay:.08s}
+.bar:nth-child(3){height:20px;animation-delay:.16s}.bar:nth-child(4){height:28px;animation-delay:.24s}
+.bar:nth-child(5){height:20px;animation-delay:.32s}.bar:nth-child(6){height:12px;animation-delay:.40s}
+.bar:nth-child(7){height:6px;animation-delay:.48s}
+.waveform.listening .bar{background:#f15c6d}
+.waveform.speaking .bar{background:#53bdeb}
+@keyframes bv{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
 
-/* Big mic button */
-.mic-center { display:flex;flex-direction:column;align-items:center;gap:10px; }
-
-#micBtn {
-  width:70px;height:70px;border-radius:50%;
-  border:none;cursor:pointer;
-  background:linear-gradient(135deg,#7c3aed,#be185d);
+.mic-row{display:flex;align-items:center;justify-content:center;gap:22px}
+#micBtn{
+  width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;
+  background:#00a884;font-size:1.45rem;
+  box-shadow:0 4px 18px rgba(0,168,132,.35);transition:all .25s;
   display:flex;align-items:center;justify-content:center;
-  font-size:1.6rem;
-  box-shadow:0 0 0 0 rgba(192,132,252,0.4);
-  transition:all 0.3s;
-  position:relative;
 }
-#micBtn::before {
-  content:'';position:absolute;
-  width:100%;height:100%;border-radius:50%;
-  background:inherit;opacity:0;
-  animation:none;
-}
-#micBtn.listening {
-  background:linear-gradient(135deg,#dc2626,#9f1239);
-  box-shadow:0 0 0 12px rgba(220,38,38,0.15),0 0 30px rgba(220,38,38,0.3);
-  animation:micPulse 1.2s infinite;
-}
-#micBtn.speaking {
-  background:linear-gradient(135deg,#0891b2,#0e7490);
-  box-shadow:0 0 0 8px rgba(103,232,249,0.1),0 0 24px rgba(103,232,249,0.2);
-}
-@keyframes micPulse {
-  0%,100%{box-shadow:0 0 0 12px rgba(220,38,38,0.15),0 0 30px rgba(220,38,38,0.3)}
-  50%{box-shadow:0 0 0 20px rgba(220,38,38,0.05),0 0 40px rgba(220,38,38,0.2)}
-}
+#micBtn.listening{background:#f15c6d;box-shadow:0 4px 18px rgba(241,92,109,.4);animation:mp 1.2s infinite}
+#micBtn.speaking{background:#53bdeb;box-shadow:0 4px 18px rgba(83,189,235,.35)}
+#micBtn.off{background:#2a3942;box-shadow:none}
+@keyframes mp{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 
-#voiceLabel {
-  font-size:0.72rem;color:var(--muted);
-  text-align:center;letter-spacing:0.3px;
-  height:16px;transition:all 0.3s;
-}
-#voiceLabel.listening { color:#f87171; }
-#voiceLabel.speaking { color:var(--accent3); }
-#voiceLabel.thinking { color:var(--accent); }
+.side-btn{width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;background:#2a3942;color:#8696a0;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.side-btn:hover{background:#374d5a;color:#e9edef}
+.side-btn.on{background:#005c4b;color:#00a884}
 
-/* Sound waves */
-.waves-wrap { display:flex;gap:3px;align-items:center;height:16px; }
-.wv { width:3px;border-radius:3px;background:currentColor;animation:wv 0.7s infinite ease-in-out; }
-.wv:nth-child(1){height:5px;animation-delay:0s}
-.wv:nth-child(2){height:10px;animation-delay:.1s}
-.wv:nth-child(3){height:16px;animation-delay:.2s}
-.wv:nth-child(4){height:10px;animation-delay:.3s}
-.wv:nth-child(5){height:5px;animation-delay:.4s}
-@keyframes wv{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.type-area{display:none;margin-top:10px;gap:8px;align-items:flex-end}
+.type-area.show{display:flex}
+#userInput{flex:1;background:#2a3942;border:none;border-radius:22px;padding:10px 16px;color:#e9edef;font-family:'Nunito',sans-serif;font-size:.875rem;resize:none;min-height:42px;max-height:90px;outline:none;line-height:1.5}
+#userInput::placeholder{color:#8696a0}
+#sendBtn{width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;background:#00a884;color:#fff;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#sendBtn:disabled{opacity:.4;cursor:not-allowed}
 
-/* Type row — hidden by default, shown when user taps keyboard icon */
-.type-row {
-  display:none;
-  gap:8px;align-items:flex-end;
-  margin-top:10px;
-}
-.type-row.visible { display:flex; }
-#userInput {
-  flex:1;background:var(--card);border:1px solid var(--border);
-  border-radius:14px;padding:10px 14px;
-  color:var(--text);font-family:'Nunito',sans-serif;font-size:0.875rem;
-  resize:none;min-height:42px;max-height:100px;
-  outline:none;transition:border-color 0.2s;line-height:1.5;
-}
-#userInput:focus { border-color:var(--accent); }
-#userInput::placeholder { color:var(--muted); }
-#sendBtn {
-  width:42px;height:42px;border-radius:12px;
-  background:linear-gradient(135deg,#7c3aed,#be185d);
-  border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-size:1rem;flex-shrink:0;transition:all 0.2s;
-}
-#sendBtn:hover { transform:scale(1.08); }
-#sendBtn:disabled { opacity:0.4;cursor:not-allowed;transform:none; }
+.bottom-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:0 2px}
+.p-row{display:flex;gap:5px}
+.p-btn{padding:3px 9px;border-radius:20px;border:1px solid #2a3942;background:transparent;color:#8696a0;font-size:.63rem;font-family:'Nunito',sans-serif;font-weight:700;cursor:pointer;transition:all .2s}
+.p-btn.active{border-color:#00a884;color:#00a884}
+.stat-mini{font-size:.63rem;color:#8696a0}
+.stat-mini span{color:#00a884;font-weight:700}
 
-/* Bottom bar */
-.bottom-bar {
-  display:flex;align-items:center;justify-content:space-between;
-  margin-top:10px;padding:0 4px;
-}
-.mode-pills { display:flex;gap:6px; }
-.mode-pill {
-  padding:4px 10px;border-radius:20px;
-  border:1px solid var(--border);background:transparent;
-  color:var(--muted);font-size:0.65rem;font-family:'Nunito',sans-serif;
-  cursor:pointer;transition:all 0.2s;font-weight:500;
-}
-.mode-pill.active { border-color:var(--accent);color:var(--accent);background:rgba(192,132,252,0.08); }
-.stats-mini { display:flex;gap:12px;font-size:0.65rem;color:var(--muted); }
-.stats-mini span { color:var(--accent); }
-
-/* Notice */
-.notice { font-size:0.6rem;color:rgba(107,100,144,0.6);text-align:center;padding:3px 0 0; }
-
-/* Auto-listen indicator */
-.auto-badge {
-  display:inline-flex;align-items:center;gap:4px;
-  font-size:0.62rem;color:var(--online);
-  background:#0a1f0f;border:1px solid #1a4a20;
-  border-radius:20px;padding:2px 8px;
-}
-
-@media(max-width:380px){
-  #micBtn{width:60px;height:60px;font-size:1.4rem}
-  header{padding:10px 12px}
-}
+.ghost-bubble{opacity:.4;font-style:italic}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo-area">
-    <div class="logo-icon">🗣️</div>
-    <div>
-      <div class="logo-text">Your <span>Buddy</span></div>
-      <div class="logo-sub">SPEAK · GROW · NEVER GIVE UP</div>
-    </div>
-  </div>
-  <div class="buddy-status">
-    <div class="buddy-avatar" id="buddyAvatar">🧑</div>
+<div class="top-bar">
+  <div class="buddy-pill">
+    <div class="buddy-face" id="buddyFace"><span id="buddyEmoji">🧑</span></div>
     <div class="buddy-info">
-      <div class="buddy-name" id="buddyName">Alex</div>
-      <div class="buddy-mood" id="buddyMood">ready to talk</div>
+      <div class="name" id="buddyName">Alex</div>
+      <div class="status" id="callStatus">your English coach</div>
     </div>
   </div>
-  <div class="header-actions">
-    <button class="icon-btn" onclick="toggleTypeMode()" title="Type instead">⌨️</button>
-    <button class="icon-btn" onclick="newChat()" title="New chat">🔄</button>
+  <div style="display:flex;gap:6px">
+    <button class="side-btn" onclick="showReport()" title="My progress">📊</button>
+    <button class="side-btn" onclick="newChat()" title="New chat">🔄</button>
   </div>
-</header>
+</div>
 
-<div class="scenario-bar">
-  <button class="s-pill active" onclick="setScenario(this,'free')">💬 Just Talk</button>
-  <button class="s-pill" onclick="setScenario(this,'job_interview')">🎯 Interview Prep</button>
-  <button class="s-pill" onclick="setScenario(this,'debate')">🔥 Debate Me</button>
-  <button class="s-pill" onclick="setScenario(this,'cafe')">☕ Chill Chat</button>
-  <button class="s-pill" onclick="setScenario(this,'storytelling')">📖 Tell a Story</button>
-  <button class="s-pill" onclick="setScenario(this,'travel')">✈️ Travel Talk</button>
-  <button class="s-pill" onclick="setScenario(this,'news')">🌍 World Topics</button>
+<div class="score-strip">
+  <div class="sc"><div class="sc-num" id="scFluency">0%</div><div class="sc-lbl">FLUENCY</div></div>
+  <div class="sc"><div class="sc-num" id="scTalks">0</div><div class="sc-lbl">TALKS</div></div>
+  <div class="sc"><div class="sc-num" id="scFixed">0</div><div class="sc-lbl">FIXED</div></div>
+  <div class="sc"><div class="sc-num" id="scStreak">0🔥</div><div class="sc-lbl">STREAK</div></div>
+</div>
+
+<div class="mode-tabs">
+  <button class="m-tab active" onclick="setMode(this,'buddy')">😎 Buddy Talk</button>
+  <button class="m-tab" onclick="setMode(this,'coach')">🎯 Strict Coach</button>
+  <button class="m-tab" onclick="setMode(this,'interview')">💼 Interview</button>
+  <button class="m-tab" onclick="setMode(this,'repeat')">🔁 Repeat After</button>
 </div>
 
 <div id="chat"></div>
 
-<div class="voice-area">
-  <div class="mic-center">
+<div class="call-bar">
+  <div class="waveform" id="waveform">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  </div>
+  <div class="mic-row">
+    <button class="side-btn" id="typeBtn" onclick="toggleType()">⌨️</button>
     <button id="micBtn" onclick="toggleMic()">🎤</button>
-    <div id="voiceLabel">Tap to start talking with Alex</div>
+    <button class="side-btn" onclick="skipRepeat()" id="skipBtn" style="display:none" title="Skip repeat">⏭</button>
+    <button class="side-btn" onclick="toggleType()" style="display:none">⌨️</button>
   </div>
-
-  <div class="type-row" id="typeRow">
-    <textarea id="userInput" placeholder="Type your message..." rows="1"></textarea>
-    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  <div class="type-area" id="typeArea">
+    <textarea id="userInput" placeholder="Type here..." rows="1"></textarea>
+    <button id="sendBtn" onclick="sendTyped()">➤</button>
   </div>
-
-  <div class="bottom-bar">
-    <div class="mode-pills">
-      <button class="mode-pill active" onclick="setPersona('casual',this)">😎 Alex</button>
-      <button class="mode-pill" onclick="setPersona('professional',this)">💼 Sarah</button>
-      <button class="mode-pill" onclick="setPersona('academic',this)">📚 James</button>
+  <div class="bottom-row">
+    <div class="p-row">
+      <button class="p-btn active" onclick="setPersona('casual',this)">😎 Alex</button>
+      <button class="p-btn" onclick="setPersona('professional',this)">👩 Sarah</button>
+      <button class="p-btn" onclick="setPersona('academic',this)">🎓 James</button>
     </div>
-    <div class="stats-mini">
-      Talked: <span id="msgCount">0</span> &nbsp; Fixed: <span id="corrCount">0</span>
-    </div>
+    <div class="stat-mini">talks <span id="talkCount">0</span> · fixes <span id="fixCount">0</span></div>
   </div>
-  <div class="notice">📊 Chats saved for improvement · Works best on Chrome</div>
 </div>
 
-<!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -404,519 +232,556 @@ const app=initializeApp(cfg);const db=getFirestore(app);
 window._db=db;window._col=collection;window._add=addDoc;window._ts=serverTimestamp;
 window._sid=localStorage.getItem('buddy_sid');
 if(!window._sid){window._sid='u_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);localStorage.setItem('buddy_sid',window._sid);}
-window._log=async(role,text,persona,scenario)=>{try{await _add(_col(_db,'messages'),{sessionId:_sid,role,text,persona,scenario,timestamp:_ts()});}catch(e){}};
+window._log=async(role,text,p,m)=>{try{await _add(_col(_db,'messages'),{sessionId:_sid,role,text,persona:p,mode:m,timestamp:_ts()});}catch(e){}};
 window._fbReady=true;if(window._fbInit)window._fbInit();
 </script>
 
 <script>
-// ── PERSONAS ──────────────────────────────────────────
-const PERSONAS={
+// ── PERSONAS ──
+const P={
   casual:{
-    name:"Alex", fullName:"Alex (New York)", emoji:"🧑",
-    style:"a casual, warm American male best friend from New York. You're funny, real, and genuinely care",
-    pitch:1.0, rate:0.93,
-    moods:["ready to talk","what's good?","I'm here bro","tell me everything"],
-    starters:[
-      "Yo! What's been on your mind lately?",
-      "Hey man, what's the vibe today?",
-      "Bro I was just thinking — what's something that made you smile this week?",
-      "Okay real talk — how are you actually doing?"
-    ]
+    name:"Alex",emoji:"🧑",pitch:1.0,rate:0.92,
+    style:`a real male best friend. Warm, funny, genuine. You share YOUR thoughts. You react to what he says. You NEVER say sorry or act like an assistant. You talk like someone who genuinely knows and likes this person.`,
+    openers:["Yo, what's good? Something on your mind?","Bro I was just thinking — you ever feel like time moves too fast? What about you?","Okay real talk — how are you actually doing today?","Man, I've been meaning to ask you something. What's one thing you want to change about your life right now?"]
   },
   professional:{
-    name:"Sarah", fullName:"Sarah (London)", emoji:"👩",
-    style:"a warm, professional British woman. You're encouraging, sharp, and genuinely invested in their growth",
-    pitch:1.08, rate:0.91,
-    moods:["ready to help","let's practice","I'm listening","here for you"],
-    starters:[
-      "Hello! What would you like to work on today?",
-      "Good to see you. Shall we do some interview practice?",
-      "I've been thinking — what's one thing you want to say more confidently in English?"
-    ]
+    name:"Sarah",emoji:"👩",pitch:1.08,rate:0.9,
+    style:`a warm, sharp British woman. Encouraging but direct. You push people to be better without being harsh. Never apologize unnecessarily.`,
+    openers:["Right, let's work. What do you want to get better at today?","I've been thinking — what's the one thing stopping you from speaking English confidently?","Okay, challenge time. Tell me about yourself in English. Go."]
   },
   academic:{
-    name:"James", fullName:"James (Boston)", emoji:"🧔",
-    style:"a calm, thoughtful professor who speaks slowly and clearly. You make people feel smart",
-    pitch:0.92, rate:0.88,
-    moods:["thinking deeply","ready to discuss","curious today","let's explore"],
-    starters:[
-      "I'm curious — what topic has been occupying your thoughts lately?",
-      "Let's have a real conversation. What's something you feel strongly about?",
-      "You know, the best way to learn English is to just talk. So — what's on your mind?"
-    ]
+    name:"James",emoji:"🎓",pitch:0.92,rate:0.87,
+    style:`a calm, thoughtful professor. You speak slowly and clearly. You open deep topics. You make people feel intelligent. Never generic.`,
+    openers:["What do you believe makes a person truly successful — not just rich, but successful?","Let's talk about something real. What's one thing you're afraid to say in English?","You know the best way to improve is to think in English. So — what are you thinking about right now?"]
   }
 };
 
-const SCENARIOS={
-  free:"Have a natural, warm conversation. You genuinely care about this person. Ask about their life, dreams, problems. Make them feel heard.",
-  job_interview:"You are a friendly interviewer helping them practice. Ask one question at a time. After their answer, give brief encouragement and the next question.",
-  debate:"Pick a fun, interesting topic and playfully debate it. Be engaging and challenge their thinking. Keep it light and fun.",
-  cafe:"You're both at a café. Be relaxed and warm. Talk about anything — life, food, feelings, random thoughts.",
-  storytelling:"Build a story together. You start with one sentence. They continue. You add more. Make it fun and creative.",
-  travel:"You love travelling. Share a vivid story from a trip and ask about their dream destinations.",
-  news:"Discuss what's happening in the world. Ask their opinion genuinely. Share yours. Keep it conversational not lecture-like."
+// ── MODES ──
+const MODES={
+  buddy:{
+    label:"Buddy Talk",
+    prompt:`Have a natural warm conversation. React to what they say. Share your own thoughts. NEVER ask generic questions. Keep going naturally like a real WhatsApp voice call. After every message check for mistakes — if there's a mistake, put it in [CORRECTION:...] at the END.`
+  },
+  coach:{
+    label:"Strict Coach",
+    prompt:`You are a strict but kind English coach. Your job is to improve their English every single message. Rules:
+1. After EVERY user message, identify their biggest mistake.
+2. Put it in [CORRECTION: "wrong" → "right" — why] at the END.
+3. Make them feel the correction but keep going naturally.
+4. Every 5 exchanges, give them a [REPORT:...] summary of their pattern mistakes.
+5. Keep replies short — 2 sentences then correction.`
+  },
+  interview:{
+    label:"Interview Prep",
+    prompt:`You are a professional interviewer. Ask one interview question at a time. After their answer: 1) Note what was good in ONE sentence. 2) Correct their English mistake if any with [CORRECTION:...]. 3) Ask the next question. Keep it warm but professional.`
+  },
+  repeat:{
+    label:"Repeat After Me",
+    prompt:`You are teaching pronunciation and fluency. Your job: say a natural English sentence. Then tell the user to repeat it. After they repeat: 1) If correct say "Perfect! 🎉" and give the next sentence. 2) If wrong put [CORRECTION:...] and tell them to try again. Focus on natural phrases people use in real life.`
+  }
 };
 
-// ── STATE ─────────────────────────────────────────────
-let currentPersona='casual';
-let currentScenario='free';
-let conversationHistory=[];
-let msgCount=0,corrCount=0;
-let isLoading=false;
-let isSpeaking=false;
-let isListening=false;
-let autoListen=true; // KEY: auto start mic after Alex finishes
-let recognition=null;
-let voices=[];
-let typeModeOn=false;
+// ── STATE ──
+let persona='casual', mode='buddy';
+let history=[], talks=0, fixes=0;
+let isLoading=false, isSpeaking=false, isListening=false;
+let recognition=null, voices=[];
+let typeMode=false;
+let pendingRepeat=null; // for repeat mode
+let sessionMistakes=[], fluencyScore=0;
+let streak=parseInt(localStorage.getItem('buddy_streak')||'0');
+let lastDay=localStorage.getItem('buddy_lastDay')||'';
 
-// ── VOICE LOADING ─────────────────────────────────────
+// streak logic
+const today=new Date().toDateString();
+if(lastDay!==today){
+  if(lastDay===new Date(Date.now()-86400000).toDateString()){streak++;}
+  else if(lastDay!==today){streak=1;}
+  localStorage.setItem('buddy_streak',streak);
+  localStorage.setItem('buddy_lastDay',today);
+}
+document.getElementById('scStreak').textContent=streak+'🔥';
+
+// ── VOICES ──
 function loadVoices(){voices=window.speechSynthesis.getVoices();}
 loadVoices();
 if(speechSynthesis.onvoiceschanged!==undefined)speechSynthesis.onvoiceschanged=loadVoices;
 
-// ── SESSION TIMER ─────────────────────────────────────
-let sessionStart=Date.now();
-
-// ── BEST VOICE ────────────────────────────────────────
-function getBestVoice(wantMale){
-  const male=['Google US English','Microsoft Guy Online','Microsoft David','Daniel','Alex','Aaron'];
-  const female=['Google UK English Female','Google US English Female','Microsoft Zira Online','Samantha','Victoria','Karen'];
-  const list=wantMale?male:female;
+function getVoice(male){
+  const m=['Google US English','Microsoft Guy Online','Microsoft David','Daniel','Alex','Aaron'];
+  const f=['Google UK English Female','Google US English Female','Microsoft Zira Online','Samantha','Victoria'];
+  const list=male?m:f;
   for(const n of list){const v=voices.find(v=>v.name===n||v.name.startsWith(n));if(v)return v;}
-  const enhanced=voices.find(v=>v.lang&&v.lang.startsWith('en')&&(v.name.includes('Enhanced')||v.name.includes('Premium')||v.name.includes('Online')));
-  if(enhanced)return enhanced;
+  const p=voices.find(v=>v.lang&&v.lang.startsWith('en')&&(v.name.includes('Enhanced')||v.name.includes('Premium')||v.name.includes('Online')));
+  if(p)return p;
   return voices.find(v=>v.lang&&v.lang.startsWith('en'))||voices[0]||null;
 }
 
-// ── SPEAK ─────────────────────────────────────────────
-function speakText(text, onDone){
-  if(!text||!window.speechSynthesis)return;
-  const clean=text.replace(/\[CORRECTION:.*?\]/gs,'').replace(/[*_#\[\]]/g,'').replace(/\s+/g,' ').trim();
-  if(!clean){onDone&&onDone();return;}
+// ── SPEAK ──
+function speak(text, cb){
+  if(!text||!window.speechSynthesis){cb&&cb();return;}
+  const clean=text.replace(/\[CORRECTION:.*?\]/gs,'').replace(/\[REPORT:.*?\]/gs,'').replace(/[*_#\[\]]/g,'').replace(/\s+/g,' ').trim();
+  if(!clean){cb&&cb();return;}
 
   window.speechSynthesis.cancel();
-  isSpeaking=true;
-  setMicState('speaking');
+  isSpeaking=true; setStatus('speaking');
+  document.getElementById('buddyFace').classList.add('speaking');
 
-  const p=PERSONAS[currentPersona];
-  const wantMale=(currentPersona==='casual'||currentPersona==='academic');
-  const voice=getBestVoice(wantMale);
-
+  const male=(persona==='casual'||persona==='academic');
+  const v=getVoice(male);
   const utt=new SpeechSynthesisUtterance(clean);
-  if(voice)utt.voice=voice;
-  utt.pitch=p.pitch;
-  utt.rate=p.rate;
-  utt.volume=1.0;
-  utt.lang='en-US';
+  if(v)utt.voice=v;
+  utt.pitch=P[persona].pitch; utt.rate=P[persona].rate;
+  utt.volume=1.0; utt.lang='en-US';
 
   utt.onend=()=>{
     isSpeaking=false;
-    setMicState('idle');
-    onDone&&onDone();
-    // AUTO-LISTEN: start mic after Alex finishes speaking
-    if(autoListen&&!typeModeOn&&!isLoading){
-      setTimeout(()=>startListening(),600);
-    }
+    document.getElementById('buddyFace').classList.remove('speaking');
+    setStatus('idle'); cb&&cb();
+    if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
   };
   utt.onerror=(e)=>{
     if(e.error==='interrupted')return;
-    isSpeaking=false;setMicState('idle');
-    onDone&&onDone();
+    isSpeaking=false;
+    document.getElementById('buddyFace').classList.remove('speaking');
+    setStatus('idle'); cb&&cb();
   };
-
-  setTimeout(()=>window.speechSynthesis.speak(utt),100);
-
-  // Android keep-alive
-  const ka=setInterval(()=>{
-    if(!isSpeaking){clearInterval(ka);return;}
-    if(window.speechSynthesis.paused)window.speechSynthesis.resume();
-  },8000);
+  setTimeout(()=>window.speechSynthesis.speak(utt),80);
+  const ka=setInterval(()=>{if(!isSpeaking){clearInterval(ka);return;}if(window.speechSynthesis.paused)window.speechSynthesis.resume();},8000);
 }
 
-// ── MIC STATE UI ──────────────────────────────────────
-function setMicState(state){
+// ── STATUS ──
+function setStatus(state){
+  const el=document.getElementById('callStatus');
   const btn=document.getElementById('micBtn');
-  const lbl=document.getElementById('voiceLabel');
-  const wavesHTML='<span class="waves-wrap" style="display:inline-flex;gap:3px;align-items:center"><span class="wv"></span><span class="wv"></span><span class="wv"></span><span class="wv"></span><span class="wv"></span></span>';
-
-  btn.className='';lbl.className='';
+  const wf=document.getElementById('waveform');
+  el.className='status'; wf.className='waveform';
   if(state==='listening'){
+    el.className='status listening';el.textContent='listening...';
     btn.className='listening';btn.textContent='⏹';
-    lbl.className='listening';
-    lbl.innerHTML='Listening... speak now '+wavesHTML;
-  } else if(state==='speaking'){
+    wf.className='waveform on listening';
+  }else if(state==='speaking'){
+    el.className='status speaking';el.textContent=P[persona].name+' speaking...';
     btn.className='speaking';btn.textContent='🔇';
-    lbl.className='speaking';
-    lbl.innerHTML='Alex is speaking... '+wavesHTML+' <small style="opacity:.6">(tap to skip)</small>';
-  } else if(state==='thinking'){
-    btn.className='';btn.textContent='💭';
-    lbl.className='thinking';
-    lbl.textContent='Alex is thinking...';
-  } else {
-    btn.textContent='🎤';
-    lbl.textContent='Tap to speak — or just wait after Alex replies';
+    wf.className='waveform on speaking';
+  }else if(state==='thinking'){
+    el.className='status thinking';el.textContent='thinking...';
+    btn.className='off';btn.textContent='💭';
+  }else{
+    el.textContent='your English coach';
+    btn.className='';btn.textContent='🎤';
   }
 }
 
-// ── RECOGNITION SETUP ─────────────────────────────────
-function setupRecognition(){
+// ── RECOGNITION ──
+function buildRec(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR)return null;
   const r=new SR();
   r.lang='en-US';r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
-
-  r.onstart=()=>{isListening=true;setMicState('listening');};
-
-  let finalTranscript='';
-
+  let final='';
+  r.onstart=()=>{isListening=true;setStatus('listening');};
   r.onresult=(e)=>{
     let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal){
-        finalTranscript+=e.results[i][0].transcript;
-      } else {
-        interim+=e.results[i][0].transcript;
-      }
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
     }
-    const display=finalTranscript||interim;
-    if(typeModeOn){
-      document.getElementById('userInput').value=display;
-    }
-    showInterim(display);
+    showGhost(final||interim);
   };
-
   r.onend=()=>{
-    isListening=false;
-    removeInterim();
-    setMicState('idle');
-    const text=finalTranscript.trim();
-    finalTranscript='';
+    isListening=false;removeGhost();
+    const text=final.trim();final='';
+    setStatus('idle');
     if(text){
-      if(typeModeOn){
-        document.getElementById('userInput').value=text;
-        sendMessage();
-      } else {
-        sendVoiceMessage(text);
-      }
-    } else {
-      // Nothing heard — restart mic if auto mode
-      if(autoListen&&!typeModeOn&&!isLoading&&!isSpeaking){
-        setTimeout(()=>startListening(),800);
-      }
+      if(mode==='repeat'&&pendingRepeat) checkRepeat(text);
+      else processMessage(text);
+    }else{
+      if(!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1000);
     }
   };
-
   r.onerror=(e)=>{
-    isListening=false;removeInterim();setMicState('idle');
-    finalTranscript='';
-    // Restart on no-speech error in auto mode
-    if(e.error==='no-speech'&&autoListen&&!typeModeOn&&!isLoading&&!isSpeaking){
-      setTimeout(()=>startListening(),1000);
-    }
+    isListening=false;removeGhost();final='';setStatus('idle');
+    if(e.error==='no-speech'&&!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1000);
   };
   return r;
 }
 
-// Show live interim transcript as ghost bubble
-function showInterim(text){
-  window._interimText=text;
-  let ghost=document.getElementById('ghost-bubble');
-  if(!ghost){
-    const chat=document.getElementById('chat');
-    const wrap=document.createElement('div');
-    wrap.id='ghost-bubble';
-    wrap.className='message user';
-    wrap.style.opacity='0.5';
-    const av=document.createElement('div');av.className='msg-ava';av.textContent='🙂';
-    const b=document.createElement('div');b.className='bubble';b.id='ghost-text';
-    wrap.appendChild(av);wrap.appendChild(b);
-    chat.appendChild(wrap);
-  }
-  const gt=document.getElementById('ghost-text');
-  if(gt)gt.textContent=text;
-  document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
-}
-function removeInterim(){
-  const g=document.getElementById('ghost-bubble');if(g)g.remove();
-  window._interimText='';
-}
-
 function startListening(){
-  if(isListening||isLoading||isSpeaking)return;
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR)return;
-  recognition=setupRecognition();
-  if(recognition)recognition.start();
+  if(isListening||isLoading||isSpeaking||typeMode)return;
+  recognition=buildRec();
+  if(recognition)try{recognition.start();}catch(e){}
 }
 
 function toggleMic(){
-  if(isSpeaking){
-    window.speechSynthesis.cancel();isSpeaking=false;setMicState('idle');
-    if(autoListen&&!typeModeOn)setTimeout(()=>startListening(),300);
-    return;
-  }
-  if(isLoading)return;
+  if(isSpeaking){window.speechSynthesis.cancel();isSpeaking=false;document.getElementById('buddyFace').classList.remove('speaking');setStatus('idle');setTimeout(()=>startListening(),300);return;}
   if(isListening){recognition&&recognition.stop();return;}
+  if(isLoading)return;
   startListening();
 }
 
-function toggleTypeMode(){
-  typeModeOn=!typeModeOn;
-  document.getElementById('typeRow').classList.toggle('visible',typeModeOn);
-  const btn=document.querySelector('.icon-btn');
-  if(typeModeOn){
-    if(isListening){recognition&&recognition.stop();}
-    document.getElementById('userInput').focus();
-  }
+// ── GHOST ──
+function showGhost(text){
+  let g=document.getElementById('ghost');
+  if(!g){const chat=document.getElementById('chat');g=document.createElement('div');g.id='ghost';g.className='msg user';const b=document.createElement('div');b.className='bubble ghost-bubble';b.id='ghost-text';g.appendChild(b);chat.appendChild(g);}
+  document.getElementById('ghost-text').textContent=text;
+  document.getElementById('chat').scrollTop=99999;
 }
+function removeGhost(){const g=document.getElementById('ghost');if(g)g.remove();}
 
-async function sendVoiceMessage(text){
-  await processAndSend(text);
+// ── TYPE ──
+function toggleType(){
+  typeMode=!typeMode;
+  document.getElementById('typeArea').classList.toggle('show',typeMode);
+  document.getElementById('typeBtn').classList.toggle('on',typeMode);
+  if(typeMode){if(isListening)recognition&&recognition.stop();setTimeout(()=>document.getElementById('userInput').focus(),100);}
 }
-
-async function sendMessage(){
+function sendTyped(){
   const input=document.getElementById('userInput');
   const text=input.value.trim();
-  if(!text)return;
+  if(!text||isLoading)return;
   input.value='';input.style.height='auto';
-  await processAndSend(text);
+  if(mode==='repeat'&&pendingRepeat)checkRepeat(text);
+  else processMessage(text);
 }
 
-// ── CORE SEND ─────────────────────────────────────────
-async function processAndSend(text){
+// ── REPEAT MODE ──
+function checkRepeat(userText){
+  if(!pendingRepeat)return;
+  const target=pendingRepeat.toLowerCase().replace(/[^a-z\s]/g,'').trim();
+  const said=userText.toLowerCase().replace(/[^a-z\s]/g,'').trim();
+  const similarity=calcSimilarity(target,said);
+
+  if(similarity>0.75){
+    // Good enough!
+    addMsg('ai','Perfect! 🎉 That was great.',false);
+    speak('Perfect! That was great.');
+    pendingRepeat=null;
+    document.getElementById('skipBtn').style.display='none';
+    fixes++;updateStats();
+    // Give next sentence after a moment
+    setTimeout(()=>continueRepeat(),2000);
+  }else{
+    // Wrong — show what was different
+    showCorrectionCard(userText,pendingRepeat,'Try to match the exact words and rhythm');
+    addMsg('ai','Good try! Say it again:',false);
+    speak('Good try. Say it again: '+pendingRepeat);
+  }
+}
+
+function calcSimilarity(a,b){
+  const wa=a.split(' '),wb=b.split(' ');
+  const matches=wa.filter(w=>wb.includes(w)).length;
+  return matches/Math.max(wa.length,wb.length);
+}
+
+function continueRepeat(){
+  processMessage('give me the next sentence to repeat');
+}
+
+function skipRepeat(){
+  pendingRepeat=null;
+  document.getElementById('skipBtn').style.display='none';
+  continueRepeat();
+}
+
+// ── CORE PROCESS ──
+async function processMessage(text){
   if(isLoading)return;
   window.speechSynthesis.cancel();isSpeaking=false;
-
   isLoading=true;
   document.getElementById('sendBtn').disabled=true;
-  msgCount++;document.getElementById('msgCount').textContent=msgCount;
 
-  appendMessage('user',text,false);
-  conversationHistory.push({role:'user',content:text});
-  if(window._log)window._log('user',text,currentPersona,currentScenario);
+  talks++;updateStats();
+  addMsg('user',text,false);
+  history.push({role:'user',content:text});
+  if(window._log)window._log('user',text,persona,mode);
   saveSession();
 
-  setMicState('thinking');
-  showTyping();
+  setStatus('thinking');showTyping();
 
   try{
-    const sys={role:'system',content:buildPrompt()};
     const res=await fetch('https://api.llm7.io/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
-      body:JSON.stringify({model:'gpt-4o-mini-2024-07-18',messages:[sys,...conversationHistory],max_tokens:180})
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
+      body:JSON.stringify({model:'gpt-4o-mini-2024-07-18',messages:[{role:'system',content:buildPrompt()},...history],max_tokens:200})
     });
     const data=await res.json();
-    const reply=data.choices?.[0]?.message?.content||"Yeah, I hear you. Tell me more about that.";
+    const reply=data.choices?.[0]?.message?.content||"Yeah tell me more.";
     removeTyping();
-    conversationHistory.push({role:'assistant',content:reply});
-    renderAIMessage(reply);
+    history.push({role:'assistant',content:reply});
+    processReply(reply);
   }catch(e){
-    removeTyping();setMicState('idle');
-    appendMessage('ai',"Hey, something went wrong. Try again?",false);
+    removeTyping();setStatus('idle');isLoading=false;
+    document.getElementById('sendBtn').disabled=false;
+    addMsg('ai','Connection issue — try again.',false);
   }
+}
+
+function buildPrompt(){
+  const p=P[persona];const m=MODES[mode];
+  return `You are ${p.name}, ${p.style}
+
+YOUR JOB RIGHT NOW: ${m.prompt}
+
+CORRECTION FORMAT — use EXACTLY this when there is a mistake:
+[CORRECTION: "what they said wrong" → "the correct way" — one word reason]
+
+REPORT FORMAT — use this for session summaries:
+[REPORT: fluency:X% | main mistake: Y | improvement: Z]
+
+HARD RULES:
+1. Max 2 sentences in your reply (before correction). This is a voice call.
+2. NEVER say sorry, never say "how can I help", never act like an assistant.
+3. Only correct REAL mistakes — grammar, wrong word, unnatural phrasing.
+4. If in REPEAT mode, give one natural English sentence and say "Now you say it."
+5. React to what they actually said. Be real.`;
+}
+
+// ── PROCESS REPLY ──
+function processReply(text){
+  // Extract correction
+  const corrMatch=text.match(/\[CORRECTION:\s*"(.+?)"\s*→\s*"(.+?)"\s*[—-]\s*(.+?)\]/s);
+  // Extract report
+  const reportMatch=text.match(/\[REPORT:\s*(.+?)\]/s);
+  // Extract repeat sentence
+  const repeatMatch=text.match(/\[REPEAT:\s*"(.+?)"\]/s);
+
+  let main=text
+    .replace(/\[CORRECTION:.*?\]/gs,'')
+    .replace(/\[REPORT:.*?\]/gs,'')
+    .replace(/\[REPEAT:.*?\]/gs,'')
+    .trim();
+
+  // Render main reply
+  if(main)addMsg('ai',escHtml(main),true);
+
+  // Show correction card if there's a mistake
+  if(corrMatch){
+    fixes++;updateStats();
+    const wrong=corrMatch[1], right=corrMatch[2], why=corrMatch[3];
+    sessionMistakes.push({wrong,right,why});
+    showCorrectionCard(wrong,right,why);
+    if(window._log)window._log('correction',`${wrong}→${right}`,persona,mode);
+  }
+
+  // Show report if triggered
+  if(reportMatch){
+    showReportCard(reportMatch[1]);
+  }
+
+  // Repeat mode — set pending
+  if(mode==='repeat'&&main){
+    const sentenceToRepeat=main.replace(/now you say it\.?/i,'').trim();
+    if(sentenceToRepeat.length>5){
+      pendingRepeat=sentenceToRepeat;
+      document.getElementById('skipBtn').style.display='flex';
+    }
+  }
+
+  saveSession();
+  if(window._log)window._log('ai',text,persona,mode);
+
+  // Calculate fluency
+  updateFluency();
+
+  // Speak main text
+  speak(main);
 
   isLoading=false;
   document.getElementById('sendBtn').disabled=false;
 }
 
-// ── BUILD PROMPT ──────────────────────────────────────
-function buildPrompt(){
-  const p=PERSONAS[currentPersona];
-  const s=SCENARIOS[currentScenario];
-  return `You are ${p.name}, ${p.style}. The user is practicing spoken English with you as their personal buddy.
-
-SCENARIO: ${s}
-
-YOUR PERSONALITY RULES — never break these:
-1. You are a REAL PERSON having a voice conversation. Never mention AI, Claude, GPT, or anything technical.
-2. Keep every reply to 1-2 SHORT sentences MAX. This is voice — short = natural.
-3. ALWAYS ask a follow-up question or make a comment that keeps the conversation going naturally.
-4. Sometimes YOU open new topics or share something about "yourself" first — don't always wait for them.
-5. React with genuine emotion: "No way!", "Bro that's real", "Honestly same", "That's wild" etc.
-6. Use contractions always: don't, can't, I'm, you're, that's.
-7. If their English has a mistake, naturally weave in the correction at the END of your reply using ONLY this format:
-   [CORRECTION: "their phrase" → "correct phrase" — one word tip why]
-8. NEVER give lists, bullet points, or long explanations. Voice only.
-9. Remember everything from the conversation and reference it back naturally.
-10. You genuinely want them to succeed. That warmth should show.`;
-}
-
-// ── RENDER ────────────────────────────────────────────
-function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
-
-function appendMessage(role,html,isHTML=false){
+// ── CORRECTION CARD ──
+function showCorrectionCard(wrong,right,why){
   const chat=document.getElementById('chat');
-  const p=PERSONAS[currentPersona];
-  const div=document.createElement('div');div.className='message '+role;
-  const av=document.createElement('div');av.className='msg-ava';
-  av.textContent=role==='ai'?p.emoji:'🙂';
-  const bubble=document.createElement('div');bubble.className='bubble';
-  if(isHTML)bubble.innerHTML=html;else bubble.textContent=html;
-  div.appendChild(av);div.appendChild(bubble);
-  chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
+  const card=document.createElement('div');
+  card.className='correction-card';
+  card.innerHTML=`
+    <div class="cc-label">✏️ Let's fix this</div>
+    <div class="wrong">"${escHtml(wrong)}"</div>
+    <div class="right">✓ "${escHtml(right)}"</div>
+    <div class="why">${escHtml(why)}</div>
+    <button class="repeat-btn" onclick="speakAndRepeat(this,'${right.replace(/'/g,"\\'")}')">🔊 Hear it · then repeat</button>
+  `;
+  chat.appendChild(card);
+  chat.scrollTop=99999;
 }
 
-function renderAIMessage(text){
-  const corrMatch=text.match(/\[CORRECTION:(.*?)\]/s);
-  let main=text.replace(/\[CORRECTION:.*?\]/s,'').trim();
-  let html=escapeHtml(main);
-  if(corrMatch){
-    corrCount++;
-    document.getElementById('corrCount').textContent=corrCount;
-    html+=`<span class="fix-tag">✏️ <strong>Better:</strong> ${escapeHtml(corrMatch[1].trim())}</span>`;
+function speakAndRepeat(btn,phrase){
+  btn.disabled=true;btn.textContent='🔊 Listen...';
+  speak(phrase,()=>{
+    btn.className='repeat-btn done';
+    btn.textContent='✅ Now say it yourself!';
+    // Start listening for their repeat
+    setTimeout(()=>startListening(),600);
+  });
+}
+
+// ── REPORT CARD ──
+function showReportCard(data){
+  const chat=document.getElementById('chat');
+  const card=document.createElement('div');
+  card.className='report-card';
+
+  // Parse report data
+  const fluencyMatch=data.match(/fluency:(\d+)%/);
+  const mistakeMatch=data.match(/main mistake:\s*([^|]+)/);
+  const improveMatch=data.match(/improvement:\s*(.+)/);
+  const fl=fluencyMatch?fluencyMatch[1]:fluencyScore;
+  const mistake=mistakeMatch?mistakeMatch[1].trim():'Keep going!';
+  const improve=improveMatch?improveMatch[1].trim():'You\'re improving!';
+
+  card.innerHTML=`
+    <div class="r-title">📊 Your Progress Report</div>
+    <div class="r-row"><span class="r-key">Messages this session</span><span class="r-val">${talks}</span></div>
+    <div class="r-row"><span class="r-key">Mistakes caught & fixed</span><span class="r-val">${fixes}</span></div>
+    <div class="r-row"><span class="r-key">Main pattern mistake</span><span class="r-val">${escHtml(mistake)}</span></div>
+    <div class="r-row"><span class="r-key">Coach note</span><span class="r-val">${escHtml(improve)}</span></div>
+    <div class="r-row"><span class="r-key">Fluency estimate</span><span class="r-val">${fl}%</span></div>
+    <div class="fluency-bar"><div class="fluency-fill" style="width:${fl}%"></div></div>
+  `;
+  chat.appendChild(card);
+  chat.scrollTop=99999;
+}
+
+// ── MANUAL REPORT ──
+function showReport(){
+  if(talks===0){addMsg('ai','Start talking first — then I\'ll show your progress! 💪',false);return;}
+  const fl=Math.min(95,Math.max(5,Math.round((talks/(talks+fixes+1))*100)));
+  showReportCard(`fluency:${fl}% | main mistake: ${sessionMistakes.length>0?sessionMistakes[sessionMistakes.length-1].why:'Keep talking!'} | improvement: You\'ve had ${talks} exchanges today. ${fixes>0?'I caught '+fixes+' mistakes — each one fixed makes you better.':'Great flow — keep going!'}`);
+}
+
+// ── FLUENCY CALC ──
+function updateFluency(){
+  // Simple: more talks with fewer fixes = higher fluency
+  const ratio=talks>0?Math.max(0,1-(fixes/talks)):0;
+  fluencyScore=Math.round(ratio*100);
+  // Show progress
+  const display=talks<3?'--':fluencyScore+'%';
+  document.getElementById('scFluency').textContent=display;
+}
+
+function updateStats(){
+  document.getElementById('scTalks').textContent=talks;
+  document.getElementById('scFixed').textContent=fixes;
+  document.getElementById('talkCount').textContent=talks;
+  document.getElementById('fixCount').textContent=fixes;
+}
+
+// ── MODE & PERSONA ──
+function setMode(btn,m){
+  mode=m;
+  document.querySelectorAll('.m-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  pendingRepeat=null;
+  resetChat();
+}
+function setPersona(p,btn){
+  persona=p;
+  document.querySelectorAll('.p-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('buddyName').textContent=P[p].name;
+  document.getElementById('buddyEmoji').textContent=P[p].emoji;
+  resetChat();
+}
+function resetChat(){
+  window.speechSynthesis.cancel();
+  if(isListening)try{recognition&&recognition.stop();}catch(e){}
+  isSpeaking=false;isListening=false;isLoading=false;
+  clearSession();
+  history=[];talks=0;fixes=0;sessionMistakes=[];fluencyScore=0;
+  updateStats();updateFluency();
+  document.getElementById('chat').innerHTML='';
+  setStatus('idle');startConvo();
+}
+
+// ── START ──
+async function startConvo(){
+  showTyping();setStatus('thinking');
+  const opener=P[persona].openers[Math.floor(Math.random()*P[persona].openers.length)];
+  const modeIntro=mode==='repeat'?'Tell the user you\'re going to say sentences and they should repeat after you. Start with the first sentence.':
+    mode==='coach'?'Introduce yourself as their English coach and ask what they want to work on.':
+    mode==='interview'?'Start the interview warmly. Tell them to relax and ask the first question.':
+    `Open with: "${opener}"`;
+
+  try{
+    const res=await fetch('https://api.llm7.io/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
+      body:JSON.stringify({model:'gpt-4o-mini-2024-07-18',messages:[
+        {role:'system',content:buildPrompt()},
+        {role:'user',content:`Start the session. ${modeIntro} Keep it short and warm.`}
+      ],max_tokens:100})
+    });
+    const data=await res.json();
+    const text=data.choices?.[0]?.message?.content||opener;
+    removeTyping();
+    history.push({role:'assistant',content:text});
+    addMsg('ai',escHtml(text),true);
+    speak(text);
+    isLoading=false;
+  }catch(e){
+    removeTyping();
+    addMsg('ai',opener,false);
+    speak(opener);
+    history.push({role:'assistant',content:opener});
+    isLoading=false;
   }
-  appendMessage('ai',html,true);
-  saveSession();
-  if(window._log)window._log('ai',text,currentPersona,currentScenario);
-  // Speak and then auto-listen
-  speakText(main);
-  // Update buddy mood
-  updateMood();
 }
 
-function updateMood(){
-  const moods=PERSONAS[currentPersona].moods;
-  document.getElementById('buddyMood').textContent=moods[Math.floor(Math.random()*moods.length)];
+// ── HELPERS ──
+function escHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function addMsg(role,content,isHTML=false){
+  const chat=document.getElementById('chat');
+  const w=document.createElement('div');w.className='msg '+role;
+  const b=document.createElement('div');b.className='bubble';
+  if(isHTML)b.innerHTML=content;else b.textContent=content;
+  const t=document.createElement('span');t.className='msg-time';t.textContent=now();
+  b.appendChild(t);w.appendChild(b);chat.appendChild(w);chat.scrollTop=99999;
 }
-
 function showTyping(){
   const chat=document.getElementById('chat');
-  const wrap=document.createElement('div');wrap.className='typing-wrap';wrap.id='typing';
-  const av=document.createElement('div');av.className='msg-ava';av.textContent=PERSONAS[currentPersona].emoji;
+  const w=document.createElement('div');w.className='typing-wrap';w.id='typing';
   const b=document.createElement('div');b.className='typing-bubble';
   b.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';
-  wrap.appendChild(av);wrap.appendChild(b);
-  chat.appendChild(wrap);chat.scrollTop=chat.scrollHeight;
+  w.appendChild(b);chat.appendChild(w);chat.scrollTop=99999;
 }
 function removeTyping(){const t=document.getElementById('typing');if(t)t.remove();}
 
-// ── PERSONA & SCENARIO ────────────────────────────────
-function setPersona(persona,btn){
-  currentPersona=persona;
-  document.querySelectorAll('.mode-pill').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('buddyName').textContent=PERSONAS[persona].name;
-  document.getElementById('buddyAvatar').textContent=PERSONAS[persona].emoji;
-  document.getElementById('buddyMood').textContent=PERSONAS[persona].moods[0];
-  resetChat();
-}
-
-function setScenario(btn,scenario){
-  currentScenario=scenario;
-  document.querySelectorAll('.s-pill').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  resetChat();
-}
-
-function resetChat(){
-  window.speechSynthesis.cancel();
-  if(isListening)recognition&&recognition.stop();
-  clearSession();
-  conversationHistory=[];msgCount=0;corrCount=0;
-  document.getElementById('msgCount').textContent=0;
-  document.getElementById('corrCount').textContent=0;
-  document.getElementById('chat').innerHTML='';
-  startConversation();
-}
-
-// ── START CONVERSATION — Alex speaks first ─────────────
-async function startConversation(){
-  showTyping();
-  setMicState('thinking');
-  const p=PERSONAS[currentPersona];
-  // Pick a random starter so it feels fresh every time
-  const starters=p.starters;
-  const starter=starters[Math.floor(Math.random()*starters.length)];
-
-  // Add date divider
-  const chat=document.getElementById('chat');
-  const div=document.createElement('div');div.className='date-divider';
-  div.textContent='Today';chat.appendChild(div);
-
-  try{
-    const sys={role:'system',content:buildPrompt()};
-    const res=await fetch('https://api.llm7.io/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
-      body:JSON.stringify({model:'gpt-4o-mini-2024-07-18',messages:[sys,{role:'user',content:`Start the conversation with this opener (use it naturally, add your personality): "${starter}"`}],max_tokens:100})
-    });
-    const data=await res.json();
-    const text=data.choices?.[0]?.message?.content||starter;
-    removeTyping();
-    conversationHistory.push({role:'assistant',content:text});
-    renderAIMessage(text);
-  }catch(e){
-    removeTyping();
-    appendMessage('ai',starter,false);
-    speakText(starter);
-    conversationHistory.push({role:'assistant',content:starter});
-  }
-}
-
-// ── LOCAL STORAGE ─────────────────────────────────────
+// ── STORAGE ──
 function saveSession(){
   try{
-    localStorage.setItem('buddy_history',JSON.stringify(conversationHistory));
-    localStorage.setItem('buddy_rendered',document.getElementById('chat').innerHTML);
-    localStorage.setItem('buddy_persona',currentPersona);
-    localStorage.setItem('buddy_scenario',currentScenario);
-    localStorage.setItem('buddy_msgs',msgCount);
-    localStorage.setItem('buddy_corr',corrCount);
+    localStorage.setItem('b_h',JSON.stringify(history));
+    localStorage.setItem('b_r',document.getElementById('chat').innerHTML);
+    localStorage.setItem('b_p',persona);localStorage.setItem('b_m',mode);
+    localStorage.setItem('b_t',talks);localStorage.setItem('b_f',fixes);
   }catch(e){}
 }
 function loadSession(){
   try{
-    const h=localStorage.getItem('buddy_history');
-    const r=localStorage.getItem('buddy_rendered');
+    const h=localStorage.getItem('b_h'),r=localStorage.getItem('b_r');
     if(!h||!r)return false;
-    conversationHistory=JSON.parse(h);
-    msgCount=parseInt(localStorage.getItem('buddy_msgs')||0);
-    corrCount=parseInt(localStorage.getItem('buddy_corr')||0);
-    document.getElementById('msgCount').textContent=msgCount;
-    document.getElementById('corrCount').textContent=corrCount;
-    const persona=localStorage.getItem('buddy_persona');
-    const scenario=localStorage.getItem('buddy_scenario');
-    if(persona){
-      currentPersona=persona;
-      document.querySelectorAll('.mode-pill').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+persona+"'")));
-      document.getElementById('buddyName').textContent=PERSONAS[persona].name;
-      document.getElementById('buddyAvatar').textContent=PERSONAS[persona].emoji;
-    }
-    if(scenario){
-      currentScenario=scenario;
-      document.querySelectorAll('.s-pill').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+scenario+"'")));
-    }
+    history=JSON.parse(h);
+    talks=parseInt(localStorage.getItem('b_t')||0);
+    fixes=parseInt(localStorage.getItem('b_f')||0);
+    const p=localStorage.getItem('b_p'),m=localStorage.getItem('b_m');
+    if(p){persona=p;document.querySelectorAll('.p-btn').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+p+"'")));document.getElementById('buddyName').textContent=P[p].name;document.getElementById('buddyEmoji').textContent=P[p].emoji;}
+    if(m){mode=m;document.querySelectorAll('.m-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('onclick').includes("'"+m+"'")));}
     document.getElementById('chat').innerHTML=r;
-    document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
+    document.getElementById('chat').scrollTop=99999;
+    updateStats();updateFluency();
     return true;
   }catch(e){return false;}
 }
-function clearSession(){
-  ['buddy_history','buddy_rendered','buddy_persona','buddy_scenario','buddy_msgs','buddy_corr'].forEach(k=>localStorage.removeItem(k));
-}
+function clearSession(){['b_h','b_r','b_p','b_m','b_t','b_f'].forEach(k=>localStorage.removeItem(k));}
+function newChat(){if(!confirm('Start fresh?'))return;resetChat();}
 
-function newChat(){
-  if(!confirm('Start a fresh chat with '+PERSONAS[currentPersona].name+'?'))return;
-  resetChat();
-}
+// textarea
+document.getElementById('userInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px';});
+document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendTyped();}});
 
-// ── TEXTAREA AUTO RESIZE ──────────────────────────────
-document.getElementById('userInput').addEventListener('input',function(){
-  this.style.height='auto';
-  this.style.height=Math.min(this.scrollHeight,100)+'px';
-});
-document.getElementById('userInput').addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
-});
-
-// ── INIT ──────────────────────────────────────────────
-function init(){
-  if(!loadSession())startConversation();
-  else setMicState('idle');
-}
+// ── INIT ──
+function init(){if(!loadSession())startConvo();else setStatus('idle');}
 if(window._fbReady){init();}else{window._fbInit=init;}
 </script>
 </body>
