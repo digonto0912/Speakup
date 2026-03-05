@@ -140,76 +140,33 @@ window.downloadSession = function(sessionId, msgs) {
   const persona = msgs[0]?.persona || 'casual';
   const scenario = msgs[0]?.scenario || 'free';
   const date = formatDate(msgs[0]?.timestamp);
-  let content = `SpeakUp - Chat Session Export\n`;
-  content += `=====================================\n`;
-  content += `Session ID: ${sessionId}\n`;
-  content += `Persona: ${persona} | Scenario: ${scenario}\n`;
-  content += `Date: ${date}\n`;
-  content += `Total messages: ${msgs.length}\n`;
-  content += `=====================================\n\n`;
-
+  let content = `Session: ${sessionId}\nPersona: ${persona} | Scenario: ${scenario} | Date: ${date}\n`;
+  content += `${'-'.repeat(60)}\n\n`;
   msgs.forEach(msg => {
-    const who = msg.role === 'user' ? '🙂 USER' : '🧑 ALEX (AI)';
-    const time = formatTime(msg.timestamp);
-    const hasComplaint = msg.role === 'user' && detectComplaints(msg.text || '');
-    content += `[${time}] ${who}${hasComplaint ? ' ⚠️ POSSIBLE COMPLAINT' : ''}\n`;
-    content += `${msg.text || ''}\n\n`;
+    const who = msg.role === 'user' ? 'USER' : 'ALEX';
+    content += `[${formatTime(msg.timestamp)}] ${who}:\n${msg.text || ''}\n\n`;
   });
-
-  // Add complaint summary at the bottom
-  const complaints = msgs.filter(m => m.role === 'user' && detectComplaints(m.text || ''));
-  if (complaints.length > 0) {
-    content += `\n=====================================\n`;
-    content += `⚠️ COMPLAINT/PROBLEM SUMMARY (${complaints.length} flagged messages)\n`;
-    content += `=====================================\n`;
-    complaints.forEach((m, i) => {
-      content += `${i+1}. [${formatTime(m.timestamp)}] ${m.text}\n\n`;
-    });
-  }
-
   const blob = new Blob([content], {type: 'text/plain'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `speakup_session_${sessionId.slice(0,12)}_${Date.now()}.txt`;
+  a.download = `speakup_session_${sessionId.slice(0,12)}.txt`;
   a.click();
   URL.revokeObjectURL(url);
 };
 
-// Download ALL sessions as one big file
+// Download ALL sessions — pure raw
 window.downloadAllSessions = function() {
   if (Object.keys(sessionMapGlobal).length === 0) {
-    alert('No sessions loaded yet. Wait for data to load.');
+    alert('No sessions loaded yet.');
     return;
   }
-  let content = `SpeakUp - ALL Sessions Export\n`;
-  content += `Generated: ${new Date().toLocaleString()}\n`;
-  content += `Total sessions: ${Object.keys(sessionMapGlobal).length}\n`;
-  content += `Total messages: ${allMessages.length}\n\n`;
-
-  // Complaint summary first
-  const allComplaints = allMessages.filter(m => m.role === 'user' && detectComplaints(m.text || ''));
-  if (allComplaints.length > 0) {
-    content += `=====================================\n`;
-    content += `⚠️ ALL USER COMPLAINTS/PROBLEMS (${allComplaints.length} total)\n`;
-    content += `=====================================\n`;
-    allComplaints.forEach((m, i) => {
-      content += `${i+1}. [Session: ${m.sessionId?.slice(0,12)}] ${m.text}\n`;
-    });
-    content += `\n`;
-  }
-
-  // Then each session
+  let content = `SpeakUp — All Raw Sessions\nGenerated: ${new Date().toLocaleString()}\nSessions: ${Object.keys(sessionMapGlobal).length} | Messages: ${allMessages.length}\n\n`;
   Object.entries(sessionMapGlobal).forEach(([sessionId, msgs]) => {
-    content += `\n${'='.repeat(50)}\n`;
-    content += `SESSION: ${sessionId}\n`;
-    content += `Persona: ${msgs[0]?.persona} | Scenario: ${msgs[0]?.scenario}\n`;
-    content += `Date: ${formatDate(msgs[0]?.timestamp)}\n`;
-    content += `${'='.repeat(50)}\n`;
+    content += `${'='.repeat(60)}\nSESSION: ${sessionId}\nPersona: ${msgs[0]?.persona} | Scenario: ${msgs[0]?.scenario} | Date: ${formatDate(msgs[0]?.timestamp)}\n${'='.repeat(60)}\n\n`;
     msgs.forEach(msg => {
       const who = msg.role === 'user' ? 'USER' : 'ALEX';
-      const flag = msg.role === 'user' && detectComplaints(msg.text || '') ? ' ⚠️' : '';
-      content += `[${formatTime(msg.timestamp)}] ${who}${flag}: ${msg.text || ''}\n`;
+      content += `[${formatTime(msg.timestamp)}] ${who}:\n${msg.text || ''}\n\n`;
     });
   });
 
