@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpeakUp — Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10; --surface: #111318; --card: #161b26; --border: #1e2535;
+    --accent: #e8c97a; --text: #e2ddd4; --muted: #5a6278; --online: #4ade80;
+    --user-color: #7ab8e8; --ai-color: #e8c97a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  header {
+    padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .logo { font-size: 1.1rem; font-weight: 600; color: var(--accent); letter-spacing: -0.3px; }
+  .logo span { color: var(--muted); font-weight: 400; font-size: 0.8rem; margin-left: 8px; }
+  .live-badge { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--online); background: #0d2010; border: 1px solid #1a4a20; padding: 4px 10px; border-radius: 20px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--online); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .stats-bar {
+    display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .stat { flex: 1; padding: 10px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: none; }
+  .stat-num { font-size: 1.4rem; font-weight: 600; color: var(--accent); font-family: 'DM Mono', monospace; }
+  .stat-label { font-size: 0.65rem; color: var(--muted); margin-top: 1px; }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sessions list */
+  .sessions-panel {
+    width: 260px; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .panel-header { padding: 10px 14px; background: var(--card); border-bottom: 1px solid var(--border); font-size: 0.72rem; color: var(--muted); font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
+  .sessions-list { flex: 1; overflow-y: auto; }
+  .session-item {
+    padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer;
+    transition: background 0.15s;
+  }
+  .session-item:hover, .session-item.active { background: var(--card); }
+  .session-id { font-size: 0.72rem; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .session-meta { font-size: 0.68rem; color: var(--muted); margin-top: 3px; }
+  .session-preview { font-size: 0.7rem; color: var(--text); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.7; }
+  .session-badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 0.6rem; background: #0d2010; color: var(--online); border: 1px solid #1a3a1a; margin-left: 4px; }
+
+  /* Chat view */
+  .chat-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .chat-header { padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+  .chat-header strong { color: var(--text); }
+  .messages-view { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg-row { display: flex; flex-direction: column; max-width: 80%; }
+  .msg-row.user { align-self: flex-end; align-items: flex-end; }
+  .msg-row.ai { align-self: flex-start; align-items: flex-start; }
+  .msg-who { font-size: 0.65rem; color: var(--muted); margin-bottom: 3px; }
+  .msg-row.user .msg-who { color: var(--user-color); }
+  .msg-row.ai .msg-who { color: var(--ai-color); }
+  .msg-text { padding: 9px 13px; border-radius: 14px; font-size: 0.82rem; line-height: 1.55; }
+  .msg-row.user .msg-text { background: #1a2840; border: 1px solid #1e3358; }
+  .msg-row.ai .msg-text { background: #1a1505; border: 1px solid #3a2e0a; }
+  .msg-time { font-size: 0.6rem; color: var(--muted); margin-top: 3px; }
+  .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.85rem; flex-direction: column; gap: 8px; }
+  .empty-icon { font-size: 2rem; opacity: 0.3; }
+
+  /* Scrollbars */
+  .sessions-list::-webkit-scrollbar, .messages-view::-webkit-scrollbar { width: 3px; }
+  .sessions-list::-webkit-scrollbar-thumb, .messages-view::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .refresh-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 3px 8px; border-radius: 6px; font-size: 0.65rem; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+  .refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="logo">SpeakUp <span>Admin Panel</span></span>
+  </div>
+  <div class="live-badge"><span class="live-dot"></span> Live Tracking</div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="statSessions">0</div><div class="stat-label">Total Sessions</div></div>
+  <div class="stat"><div class="stat-num" id="statMessages">0</div><div class="stat-label">Total Messages</div></div>
+  <div class="stat"><div class="stat-num" id="statUsers">0</div><div class="stat-label">User Messages</div></div>
+  <div class="stat"><div class="stat-num" id="statCorrections">0</div><div class="stat-label">Corrections Given</div></div>
+</div>
+
+<div class="main">
+  <div class="sessions-panel">
+    <div class="panel-header">
+      <span>Sessions</span>
+      <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+    </div>
+    <div class="sessions-list" id="sessionsList">
+      <div style="padding:20px;text-align:center;color:var(--muted);font-size:0.75rem;">Loading...</div>
+    </div>
+  </div>
+
+  <div class="chat-panel">
+    <div class="chat-header" id="chatHeader">← Select a session to view chat</div>
+    <div class="messages-view" id="messagesView">
+      <div class="empty-state">
+        <div class="empty-icon">👀</div>
+        <div>Select a session from the left to see what users are saying</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAIceqMXYNY5EH_3vTmIbogjb6wJ2CCBxQ",
+  authDomain: "speakup-27de0.firebaseapp.com",
+  projectId: "speakup-27de0",
+  storageBucket: "speakup-27de0.firebasestorage.app",
+  messagingSenderId: "811108429557",
+  appId: "1:811108429557:web:1ad8de2151de43b8f8dfbc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let allMessages = [];
+let selectedSession = null;
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return d.toLocaleDateString();
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+window.loadData = async function() {
+  try {
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'));
+    const snap = await getDocs(q);
+    allMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Stats
+    const sessions = [...new Set(allMessages.map(m => m.sessionId))];
+    const userMsgs = allMessages.filter(m => m.role === 'user');
+    const corrections = allMessages.filter(m => m.role === 'ai' && m.text && m.text.includes('[CORRECTION:'));
+
+    document.getElementById('statSessions').textContent = sessions.length;
+    document.getElementById('statMessages').textContent = allMessages.length;
+    document.getElementById('statUsers').textContent = userMsgs.length;
+    document.getElementById('statCorrections').textContent = corrections.length;
+
+    // Group by session
+    const sessionMap = {};
+    allMessages.forEach(m => {
+      if (!sessionMap[m.sessionId]) sessionMap[m.sessionId] = [];
+      sessionMap[m.sessionId].push(m);
+    });
+
+    // Render sessions list
+    const list = document.getElementById('sessionsList');
+    if (sessions.length === 0) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:0.75rem;">No sessions yet.<br>Share your app and wait!</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    // Sort sessions by latest message
+    sessions.sort((a,b) => {
+      const aLast = sessionMap[a][sessionMap[a].length-1]?.timestamp;
+      const bLast = sessionMap[b][sessionMap[b].length-1]?.timestamp;
+      if (!aLast || !bLast) return 0;
+      const aT = aLast.toDate ? aLast.toDate() : new Date(aLast);
+      const bT = bLast.toDate ? bLast.toDate() : new Date(bLast);
+      return bT - aT;
+    });
+
+    sessions.forEach(sessionId => {
+      const msgs = sessionMap[sessionId];
+      const lastMsg = msgs[msgs.length - 1];
+      const userMsgCount = msgs.filter(m => m.role === 'user').length;
+      const shortId = sessionId.slice(0,16) + '...';
+      const persona = msgs[0]?.persona || 'casual';
+      const scenario = msgs[0]?.scenario || 'free';
+
+      const div = document.createElement('div');
+      div.className = 'session-item' + (selectedSession === sessionId ? ' active' : '');
+      div.innerHTML = `
+        <div class="session-id">${shortId}</div>
+        <div class="session-meta">${persona} · ${scenario} · ${userMsgCount} msgs
+          <span class="session-badge">${timeAgo(lastMsg?.timestamp)}</span>
+        </div>
+        <div class="session-preview">${lastMsg?.role === 'user' ? '🙂' : '🧑'} ${(lastMsg?.text || '').slice(0,60)}...</div>
+      `;
+      div.onclick = () => showSession(sessionId, sessionMap[sessionId]);
+      list.appendChild(div);
+    });
+
+    // Re-render selected session if open
+    if (selectedSession && sessionMap[selectedSession]) {
+      showSession(selectedSession, sessionMap[selectedSession]);
+    }
+  } catch(e) {
+    document.getElementById('sessionsList').innerHTML = `<div style="padding:16px;color:#f87171;font-size:0.75rem;">Error loading data.<br>${e.message}</div>`;
+  }
+};
+
+window.showSession = function(sessionId, msgs) {
+  selectedSession = sessionId;
+  // Highlight active
+  document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+
+  const persona = msgs[0]?.persona || 'casual';
+  const scenario = msgs[0]?.scenario || 'free';
+  const userMsgCount = msgs.filter(m => m.role === 'user').length;
+  document.getElementById('chatHeader').innerHTML = `<strong>${sessionId.slice(0,20)}...</strong> · ${persona} · ${scenario} · ${userMsgCount} user messages`;
+
+  const view = document.getElementById('messagesView');
+  view.innerHTML = '';
+
+  msgs.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `msg-row ${msg.role}`;
+    const who = msg.role === 'user' ? '🙂 User' : '🧑 Alex (AI)';
+    div.innerHTML = `
+      <div class="msg-who">${who}</div>
+      <div class="msg-text">${(msg.text || '').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${formatTime(msg.timestamp)}</div>
+    `;
+    view.appendChild(div);
+  });
+  view.scrollTop = view.scrollHeight;
+};
+
+// Auto refresh every 15 seconds
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>
