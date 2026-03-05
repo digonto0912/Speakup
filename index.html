@@ -568,36 +568,52 @@ function setupRecognition(){
 
   r.onstart=()=>{isListening=true;setMicState('listening');};
 
+  let finalTranscript='';
+
   r.onresult=(e)=>{
-    let final='',interim='';
+    let interim='';
     for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
+      if(e.results[i].isFinal){
+        finalTranscript+=e.results[i][0].transcript;
+      } else {
+        interim+=e.results[i][0].transcript;
+      }
     }
+    const display=finalTranscript||interim;
     if(typeModeOn){
-      document.getElementById('userInput').value=final||interim;
+      document.getElementById('userInput').value=display;
     }
-    // Show live transcript as a ghost bubble
-    showInterim(final||interim);
+    showInterim(display);
   };
 
   r.onend=()=>{
     isListening=false;
     removeInterim();
     setMicState('idle');
-    const text=(typeModeOn?document.getElementById('userInput').value:window._interimText||'').trim();
-    window._interimText='';
+    const text=finalTranscript.trim();
+    finalTranscript='';
     if(text){
-      if(typeModeOn)sendMessage();
-      else sendVoiceMessage(text);
+      if(typeModeOn){
+        document.getElementById('userInput').value=text;
+        sendMessage();
+      } else {
+        sendVoiceMessage(text);
+      }
     } else {
-      setMicState('idle');
+      // Nothing heard — restart mic if auto mode
+      if(autoListen&&!typeModeOn&&!isLoading&&!isSpeaking){
+        setTimeout(()=>startListening(),800);
+      }
     }
   };
 
   r.onerror=(e)=>{
     isListening=false;removeInterim();setMicState('idle');
-    window._interimText='';
+    finalTranscript='';
+    // Restart on no-speech error in auto mode
+    if(e.error==='no-speech'&&autoListen&&!typeModeOn&&!isLoading&&!isSpeaking){
+      setTimeout(()=>startListening(),1000);
+    }
   };
   return r;
 }
