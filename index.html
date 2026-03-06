@@ -165,9 +165,50 @@ body{font-family:'Nunito',sans-serif;color:#e9edef;display:flex;flex-direction:c
 .stat-mini span{color:#00a884;font-weight:700}
 
 .ghost-bubble{opacity:.4;font-style:italic}
+
+/* ── LOADER SCREEN ── */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:#111b21;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:0;
+}
+#loader.hidden{opacity:0;pointer-events:none;transition:opacity .5s ease;}
+.ld-logo{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#00a884,#025c4c);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;margin-bottom:22px;
+  box-shadow:0 0 32px rgba(0,168,132,0.4);
+  animation:ldPulse 2s infinite ease-in-out;
+}
+@keyframes ldPulse{0%,100%{box-shadow:0 0 32px rgba(0,168,132,0.4)}50%{box-shadow:0 0 52px rgba(0,168,132,0.7)}}
+.ld-title{font-size:1.4rem;font-weight:800;color:#e9edef;margin-bottom:6px;letter-spacing:.5px}
+.ld-sub{font-size:.75rem;color:#8696a0;margin-bottom:32px;text-align:center;line-height:1.5;padding:0 32px}
+.ld-bar-wrap{width:220px;height:6px;background:#2a3942;border-radius:3px;overflow:hidden;margin-bottom:10px}
+.ld-bar{height:100%;width:0%;background:linear-gradient(90deg,#00a884,#4ade80);border-radius:3px;transition:width .3s ease}
+.ld-pct{font-size:.7rem;color:#00a884;font-weight:700;letter-spacing:.5px}
+.ld-step{font-size:.65rem;color:#8696a0;margin-top:6px}
+
+/* App hidden until loader done */
+#app{opacity:0;transition:opacity .5s ease;}
+#app.ready{opacity:1;}
 </style>
 </head>
 <body>
+
+<!-- ── LOADING SCREEN — shown until Kokoro TTS is fully ready ── -->
+<div id="loader">
+  <div class="ld-logo">🎙️</div>
+  <div class="ld-title">Buddy</div>
+  <div class="ld-sub">Loading high-quality voice engine.<br>This is a one-time download (~85MB).<br>Cached forever after first load.</div>
+  <div class="ld-bar-wrap"><div class="ld-bar" id="ldBar"></div></div>
+  <div class="ld-pct" id="ldPct">0%</div>
+  <div class="ld-step" id="ldStep">Initializing…</div>
+</div>
+
+<!-- ── MAIN APP — hidden until loader done ── -->
+<div id="app">
 
 <div class="top-bar">
   <div class="buddy-pill">
@@ -233,27 +274,120 @@ window._db=db;window._col=collection;window._add=addDoc;window._ts=serverTimesta
 window._sid=localStorage.getItem('buddy_sid');
 if(!window._sid){window._sid='u_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);localStorage.setItem('buddy_sid',window._sid);}
 window._log=async(role,text,p,m)=>{try{await _add(_col(_db,'messages'),{sessionId:_sid,role,text,persona:p,mode:m,timestamp:_ts()});}catch(e){}};
-window._fbReady=true;if(window._fbInit)window._fbInit();
+// Firebase is ready — but we DON'T init the app yet.
+// The Kokoro loader controls when to call init() via _appReady.
+window._fbReady=true;
+</script>
+
+<script type="module">
+import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.2/dist/kokoro.web.js';
+
+window._kokoroReady = false;
+window._tts = null;
+window._audioCtx = null;
+window._currentSrc = null;
+
+function getAudioCtx(){
+  if(!window._audioCtx || window._audioCtx.state==='closed'){
+    window._audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  return window._audioCtx;
+}
+window._getAudioCtx = getAudioCtx;
+
+function setLoadUI(pct, step){
+  const bar = document.getElementById('ldBar');
+  const pctEl = document.getElementById('ldPct');
+  const stepEl = document.getElementById('ldStep');
+  if(bar) bar.style.width = pct + '%';
+  if(pctEl) pctEl.textContent = Math.round(pct) + '%';
+  if(stepEl) stepEl.textContent = step || '';
+}
+
+function revealApp(){
+  const loader = document.getElementById('loader');
+  const app = document.getElementById('app');
+  loader.classList.add('hidden');
+  app.classList.add('ready');
+  setTimeout(()=>{
+    loader.style.display='none';
+    // Call init — _appReady is set by the main script block
+    if(window._appReady) window._appReady();
+  }, 550);
+}
+
+(async()=>{
+  try{
+    setLoadUI(2, 'Connecting to voice model…');
+
+    window._tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0',{
+      dtype: 'q8',
+      progress_callback:(p)=>{
+        if(p.status === 'initiate'){
+          setLoadUI(5, `Starting: ${p.file||'model'}…`);
+        } else if(p.status === 'download'){
+          setLoadUI(8, `Downloading voice model…`);
+        } else if(p.status === 'progress'){
+          // Progress comes per-file; map it to 10–90% range
+          const pct = 10 + ((p.progress||0) * 0.80);
+          setLoadUI(pct, `Loading voice model… ${Math.round(p.progress||0)}%`);
+        } else if(p.status === 'done'){
+          setLoadUI(92, 'Finalizing voice engine…');
+        }
+      }
+    });
+
+    window._kokoroReady = true;
+    setLoadUI(100, '✅ Voice ready!');
+
+    // Small pause so user sees 100%
+    setTimeout(()=> revealApp(), 600);
+
+  } catch(e){
+    console.warn('Kokoro failed, using browser voice:', e);
+    window._kokoroReady = false;
+    setLoadUI(100, '⚠️ Using system voice (HD unavailable)');
+    setTimeout(()=> revealApp(), 800);
+  }
+})();
 </script>
 
 <script>
 // ── PERSONAS ──
+// voice: Kokoro voice ID  |  speed: base speaking speed (mode multiplier applied on top)
+// am_michael → warm American male  |  bf_emma → natural British female
+// bm_george → authoritative British male
 const P={
   casual:{
-    name:"Alex",emoji:"🧑",pitch:1.0,rate:0.92,
+    name:"Alex",emoji:"🧑",
+    voice:"am_michael", speed:1.08,          // upbeat, natural pace
+    pitch:1.0,rate:0.92,                      // fallback only
     style:`a real male best friend. Warm, funny, genuine. You share YOUR thoughts. You react to what he says. You NEVER say sorry or act like an assistant. You talk like someone who genuinely knows and likes this person.`,
     openers:["Yo, what's good? Something on your mind?","Bro I was just thinking — you ever feel like time moves too fast? What about you?","Okay real talk — how are you actually doing today?","Man, I've been meaning to ask you something. What's one thing you want to change about your life right now?"]
   },
   professional:{
-    name:"Sarah",emoji:"👩",pitch:1.08,rate:0.9,
+    name:"Sarah",emoji:"👩",
+    voice:"bf_emma", speed:0.95,             // composed, British warmth
+    pitch:1.08,rate:0.9,
     style:`a warm, sharp British woman. Encouraging but direct. You push people to be better without being harsh. Never apologize unnecessarily.`,
     openers:["Right, let's work. What do you want to get better at today?","I've been thinking — what's the one thing stopping you from speaking English confidently?","Okay, challenge time. Tell me about yourself in English. Go."]
   },
   academic:{
-    name:"James",emoji:"🎓",pitch:0.92,rate:0.87,
+    name:"James",emoji:"🎓",
+    voice:"bm_george", speed:0.88,           // measured, scholarly
+    pitch:0.92,rate:0.87,
     style:`a calm, thoughtful professor. You speak slowly and clearly. You open deep topics. You make people feel intelligent. Never generic.`,
     openers:["What do you believe makes a person truly successful — not just rich, but successful?","Let's talk about something real. What's one thing you're afraid to say in English?","You know the best way to improve is to think in English. So — what are you thinking about right now?"]
   }
+};
+
+// ── VOICE SPEED MULTIPLIERS PER MODE ──
+// Applied on top of persona base speed to tune tone & vibe per context
+const MODE_SPEED={
+  buddy:1.05,      // energetic, conversational
+  coach:0.95,      // firm, deliberate
+  interview:0.92,  // professional, measured
+  repeat:0.80      // slow, crystal-clear articulation for learning
 };
 
 // ── MODES ──
@@ -287,8 +421,9 @@ let history=[], talks=0, fixes=0;
 let isLoading=false, isSpeaking=false, isListening=false;
 let recognition=null, voices=[];
 let typeMode=false;
-let pendingRepeat=null; // for repeat mode
+let pendingRepeat=null;
 let sessionMistakes=[], fluencyScore=0;
+let micUnlocked=false; // true after first mic tap — enables auto-listen chain
 let streak=parseInt(localStorage.getItem('buddy_streak')||'0');
 let lastDay=localStorage.getItem('buddy_lastDay')||'';
 
@@ -317,9 +452,11 @@ function getVoice(male){
   return voices.find(v=>v.lang&&v.lang.startsWith('en'))||voices[0]||null;
 }
 
-// ── SPEAK ──
+// ── SPEAK (Kokoro HD TTS engine) ──
+// Primary: Kokoro ONNX (am_michael / bf_emma / bm_george) — free, unlimited, ElevenLabs-quality
+// Fallback: Web Speech API if Kokoro hasn't loaded yet
 function speak(text, cb){
-  if(!text||!window.speechSynthesis){cb&&cb();return;}
+  if(!text){cb&&cb();return;}
   const clean=text.replace(/\[CORRECTION:.*?\]/gs,'').replace(/\[REPORT:.*?\]/gs,'').replace(/[*_#\[\]]/g,'').replace(/\s+/g,' ').trim();
   if(!clean){cb&&cb();return;}
 
@@ -327,13 +464,68 @@ function speak(text, cb){
   isSpeaking=true; setStatus('speaking');
   document.getElementById('buddyFace').classList.add('speaking');
 
+  if(window._kokoroReady && window._tts){
+    _speakKokoro(clean, cb);
+  } else {
+    _speakFallback(clean, cb);
+    // Also set a listener so next speak() uses Kokoro once ready
+    if(!window._onKokoroReady){
+      window._onKokoroReady=()=>{ /* ready for next call */ };
+    }
+  }
+}
+
+async function _speakKokoro(text, cb){
+  try{
+    // Compute final speed: persona base × mode multiplier
+    const baseSpeed = P[persona].speed || 1.0;
+    const modeMulti = MODE_SPEED[mode] || 1.0;
+    const speed = +(baseSpeed * modeMulti).toFixed(2);
+
+    // Generate audio with Kokoro
+    const result = await window._tts.generate(text,{
+      voice: P[persona].voice,
+      speed: speed
+    });
+
+    // Resume AudioContext (required for iOS/mobile after user gesture)
+    const ctx = window._getAudioCtx();
+    if(ctx.state==='suspended') await ctx.resume();
+
+    // Build and play AudioBuffer
+    const buf = ctx.createBuffer(1, result.audio.length, result.sampling_rate);
+    buf.getChannelData(0).set(result.audio);
+
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+
+    // Store reference so we can stop mid-speech
+    window._currentSrc = src;
+
+    src.onended = ()=>{
+      window._currentSrc = null;
+      isSpeaking=false;
+      document.getElementById('buddyFace').classList.remove('speaking');
+      setStatus('idle'); cb&&cb();
+      if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
+    };
+
+    src.start(0);
+
+  }catch(e){
+    console.warn('Kokoro speak error, falling back:', e);
+    _speakFallback(text, cb);
+  }
+}
+
+function _speakFallback(text, cb){
   const male=(persona==='casual'||persona==='academic');
   const v=getVoice(male);
-  const utt=new SpeechSynthesisUtterance(clean);
+  const utt=new SpeechSynthesisUtterance(text);
   if(v)utt.voice=v;
   utt.pitch=P[persona].pitch; utt.rate=P[persona].rate;
   utt.volume=1.0; utt.lang='en-US';
-
   utt.onend=()=>{
     isSpeaking=false;
     document.getElementById('buddyFace').classList.remove('speaking');
@@ -397,24 +589,53 @@ function buildRec(){
       if(mode==='repeat'&&pendingRepeat) checkRepeat(text);
       else processMessage(text);
     }else{
-      if(!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1000);
+      // Only auto-restart if user has unlocked mic and nothing else is happening
+      if(micUnlocked&&!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1200);
     }
   };
   r.onerror=(e)=>{
     isListening=false;removeGhost();final='';setStatus('idle');
-    if(e.error==='no-speech'&&!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1000);
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      micUnlocked=false; // reset — user needs to re-tap
+      addMsg('ai','Microphone access denied. Please allow mic and tap the button again.', false);
+      return;
+    }
+    if(micUnlocked&&!isLoading&&!isSpeaking)setTimeout(()=>startListening(),1200);
   };
   return r;
 }
 
 function startListening(){
-  if(isListening||isLoading||isSpeaking||typeMode)return;
+  if(!micUnlocked||isListening||isLoading||isSpeaking||typeMode)return;
   recognition=buildRec();
-  if(recognition)try{recognition.start();}catch(e){}
+  if(!recognition)return;
+  try{recognition.start();}catch(e){
+    // Already started or other error — reset and try once more after delay
+    isListening=false;
+    if(e.name==='InvalidStateError')return; // already running
+    setTimeout(()=>{if(!isListening&&!isSpeaking&&!isLoading)startListening();},500);
+  }
 }
 
+function stopSpeaking(){
+  // Stop Kokoro audio
+  if(window._currentSrc){try{window._currentSrc.stop();}catch(e){}window._currentSrc=null;}
+  // Stop Web Speech fallback
+  window.speechSynthesis.cancel();
+  isSpeaking=false;
+  document.getElementById('buddyFace').classList.remove('speaking');
+}
 function toggleMic(){
-  if(isSpeaking){window.speechSynthesis.cancel();isSpeaking=false;document.getElementById('buddyFace').classList.remove('speaking');setStatus('idle');setTimeout(()=>startListening(),300);return;}
+  // First tap unlocks mic (required for mobile gesture policy)
+  if(!micUnlocked){
+    micUnlocked=true;
+    // Also resume AudioContext for iOS — must happen inside user gesture
+    try{
+      const ctx=window._getAudioCtx();
+      if(ctx.state==='suspended') ctx.resume();
+    }catch(e){}
+  }
+  if(isSpeaking){stopSpeaking();setStatus('idle');setTimeout(()=>startListening(),300);return;}
   if(isListening){recognition&&recognition.stop();return;}
   if(isLoading)return;
   startListening();
@@ -488,7 +709,7 @@ function skipRepeat(){
 // ── CORE PROCESS ──
 async function processMessage(text){
   if(isLoading)return;
-  window.speechSynthesis.cancel();isSpeaking=false;
+  stopSpeaking();isSpeaking=false;
   isLoading=true;
   document.getElementById('sendBtn').disabled=true;
 
@@ -685,9 +906,9 @@ function setPersona(p,btn){
   resetChat();
 }
 function resetChat(){
-  window.speechSynthesis.cancel();
+  stopSpeaking();
   if(isListening)try{recognition&&recognition.stop();}catch(e){}
-  isSpeaking=false;isListening=false;isLoading=false;
+  isSpeaking=false;isListening=false;isLoading=false;micUnlocked=false;
   clearSession();
   history=[];talks=0;fixes=0;sessionMistakes=[];fluencyScore=0;
   updateStats();updateFluency();
@@ -781,8 +1002,12 @@ document.getElementById('userInput').addEventListener('input',function(){this.st
 document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendTyped();}});
 
 // ── INIT ──
+// Called by Kokoro loader once HD voice is ready (and Firebase is up)
 function init(){if(!loadSession())startConvo();else setStatus('idle');}
-if(window._fbReady){init();}else{window._fbInit=init;}
+window._appReady = init;  // Kokoro loader calls this after loading screen
+// Fallback: if somehow Firebase fires init before loader (shouldn't happen but safe)
+window._fbInit = ()=>{ /* wait for Kokoro loader to call _appReady */ };
 </script>
+</div><!-- /#app -->
 </body>
 </html>
