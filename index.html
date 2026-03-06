@@ -238,57 +238,30 @@ window._fbReady=true;
 if(window._appReady)window._appReady();
 </script>
 
-<!-- Connect to official Kokoro-TTS HuggingFace Space in background -->
-<script type="module">
-import { Client } from 'https://esm.sh/@gradio/client@1.6.0';
-(async()=>{
-  try{
-    window._kokoroClient = await Client.connect('hexgrad/Kokoro-TTS');
-    console.log('✅ Kokoro HF Space ready');
-    // Show in chat
-    const chat = document.getElementById('chat');
-    if(chat){
-      const b=document.createElement('div');
-      b.style.cssText='align-self:center;background:#00a884;color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;';
-      b.textContent='✅ KOKORO HD VOICE READY';
-      chat.appendChild(b); chat.scrollTop=99999;
-    }
-  }catch(e){
-    console.warn('Kokoro HF Space unavailable, using browser fallback:', e);
-    const chat = document.getElementById('chat');
-    if(chat){
-      const b=document.createElement('div');
-      b.style.cssText='align-self:center;background:#e53e3e;color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;';
-      b.textContent='❌ KOKORO FAILED: '+( e.message||String(e));
-      chat.appendChild(b); chat.scrollTop=99999;
-    }
-  }
-})();
-</script>
-
 <script>
 // ── PERSONAS ──
-// voice: Kokoro voice ID  |  speed: base speaking speed (mode multiplier applied on top)
-// am_michael → warm American male  |  bf_emma → natural British female
-// bm_george → authoritative British male
+// voice: StreamElements/Amazon Polly voice name
+// am_michael / bf_emma / bm_george replaced with real Polly voices:
+//   Matthew = natural American male  |  Amy = warm British female
+//   Brian = deep British male (professor-like)
 const P={
   casual:{
     name:"Alex",emoji:"🧑",
-    voice:"am_michael", speed:1.08,          // upbeat, natural pace
-    pitch:1.0,rate:0.92,                      // fallback only
+    voice:"Matthew", speed:1.08,
+    pitch:1.0,rate:0.92,
     style:`a real male best friend. Warm, funny, genuine. You share YOUR thoughts. You react to what he says. You NEVER say sorry or act like an assistant. You talk like someone who genuinely knows and likes this person.`,
     openers:["Yo, what's good? Something on your mind?","Bro I was just thinking — you ever feel like time moves too fast? What about you?","Okay real talk — how are you actually doing today?","Man, I've been meaning to ask you something. What's one thing you want to change about your life right now?"]
   },
   professional:{
     name:"Sarah",emoji:"👩",
-    voice:"bf_emma", speed:0.95,             // composed, British warmth
+    voice:"Amy", speed:0.95,
     pitch:1.08,rate:0.9,
     style:`a warm, sharp British woman. Encouraging but direct. You push people to be better without being harsh. Never apologize unnecessarily.`,
     openers:["Right, let's work. What do you want to get better at today?","I've been thinking — what's the one thing stopping you from speaking English confidently?","Okay, challenge time. Tell me about yourself in English. Go."]
   },
   academic:{
     name:"James",emoji:"🎓",
-    voice:"bm_george", speed:0.88,           // measured, scholarly
+    voice:"Brian", speed:0.88,
     pitch:0.92,rate:0.87,
     style:`a calm, thoughtful professor. You speak slowly and clearly. You open deep topics. You make people feel intelligent. Never generic.`,
     openers:["What do you believe makes a person truly successful — not just rich, but successful?","Let's talk about something real. What's one thing you're afraid to say in English?","You know the best way to improve is to think in English. So — what are you thinking about right now?"]
@@ -367,20 +340,18 @@ function getVoice(male){
 }
 
 // ── SPEAK ENGINE ──
-// Primary: HuggingFace hexgrad/Kokoro-TTS Space (real Kokoro, free, no download)
-//   window._kokoroClient is set by the module script above once connected
-// Fallback: Web Speech API
+// StreamElements TTS — Amazon Polly voices, free, no key, CORS-friendly
+// Matthew (US male) · Amy (British female) · Brian (British male)
+const SE_BASE = 'https://api.streamelements.com/kappa/v2/speech';
 let _currentAudio = null;
 
-// Debug badge shown in chat so you can see exactly which voice is used
 function _showVoiceBadge(label, color, detail){
   const chat = document.getElementById('chat');
   const old = document.getElementById('voice-badge');
   if(old) old.remove();
   const el = document.createElement('div');
   el.id = 'voice-badge';
-  el.style.cssText = `align-self:center;background:${color};color:#fff;font-size:.62rem;font-weight:800;
-    padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;`;
+  el.style.cssText = `align-self:center;background:${color};color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;`;
   el.textContent = label + (detail ? '  · ' + detail : '');
   chat.appendChild(el);
   chat.scrollTop = 99999;
@@ -400,50 +371,33 @@ function speak(text, cb){
   stopSpeaking();
   isSpeaking=true; setStatus('speaking');
   document.getElementById('buddyFace').classList.add('speaking');
-  _speakKokoro(clean, cb);
+  _speakSE(clean, cb);
 }
 
-async function _speakKokoro(text, cb){
-  const baseSpeed = P[persona].speed || 1.0;
-  const modeMulti = MODE_SPEED[mode] || 1.0;
-  const speed = +(baseSpeed * modeMulti).toFixed(2);
+async function _speakSE(text, cb){
+  try{
+    const voice = P[persona].voice;
+    const url = `${SE_BASE}?voice=${voice}&text=${encodeURIComponent(text)}`;
+    _showVoiceBadge('🎙️ AMAZON POLLY via StreamElements', '#00a884', `voice: ${voice}`);
 
-  // Try HuggingFace Kokoro Space
-  if(window._kokoroClient){
-    try{
-      _showVoiceBadge('🎙️ KOKORO HD', '#00a884', `voice:${P[persona].voice}  speed:${speed}`);
-      const result = await window._kokoroClient.predict('/infer', {
-        text: text,
-        voice: P[persona].voice,
-        speed: speed,
-        use_gpu: false
-      });
-      const audioData = result.data[0];
-      const audioUrl = audioData?.url || audioData;
-      if(!audioUrl) throw new Error('no audio url');
-
-      const audio = new Audio(audioUrl);
-      _currentAudio = audio;
-      audio.onended = ()=>{
-        _currentAudio=null; isSpeaking=false;
-        document.getElementById('buddyFace').classList.remove('speaking');
-        setStatus('idle'); cb&&cb();
-        if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
-      };
-      audio.onerror = (err)=>{
-        _showVoiceBadge('⚠️ KOKORO AUDIO ERROR — falling back', '#e53e3e', String(err));
-        _currentAudio=null; _speakFallback(text, cb);
-      };
-      await audio.play();
-      return;
-    }catch(e){
-      _showVoiceBadge('❌ KOKORO FAILED — falling back', '#e53e3e', e.message||String(e));
-      console.warn('Kokoro predict failed:', e);
-    }
-  } else {
-    _showVoiceBadge('⏳ KOKORO NOT CONNECTED YET — robot fallback', '#f6ad55', 'window._kokoroClient = ' + window._kokoroClient);
+    const audio = new Audio(url);
+    _currentAudio = audio;
+    audio.onended = ()=>{
+      _currentAudio=null; isSpeaking=false;
+      document.getElementById('buddyFace').classList.remove('speaking');
+      setStatus('idle'); cb&&cb();
+      if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
+    };
+    audio.onerror = (e)=>{
+      _currentAudio=null;
+      _showVoiceBadge('❌ StreamElements failed — using browser', '#e53e3e', String(e.message||e));
+      _speakFallback(text, cb);
+    };
+    await audio.play();
+  }catch(e){
+    _showVoiceBadge('❌ StreamElements error — using browser', '#e53e3e', e.message||String(e));
+    _speakFallback(text, cb);
   }
-  _speakFallback(text, cb);
 }
 
 function _speakFallback(text, cb){
