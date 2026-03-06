@@ -340,21 +340,57 @@ function getVoice(male){
 }
 
 // ── SPEAK ENGINE ──
-// llm7.io /v1/audio/speech — same free API used for chat, OpenAI-quality voices
-// echo (warm male) · nova (warm female) · onyx (deep male)
 const TTS_URL = 'https://api.llm7.io/v1/audio/speech';
 let _currentAudio = null;
+let _lastTTSError = '';
 
-function _showVoiceBadge(label, color, detail){
+// Badges stack — never overwrite so we always see the real error
+function _addBadge(label, color){
   const chat = document.getElementById('chat');
-  const old = document.getElementById('voice-badge');
-  if(old) old.remove();
+  if(!chat) return;
   const el = document.createElement('div');
-  el.id = 'voice-badge';
-  el.style.cssText = `align-self:center;background:${color};color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;`;
-  el.textContent = label + (detail ? '  · ' + detail : '');
+  el.style.cssText = `align-self:center;background:${color};color:#fff;font-size:.6rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.4px;margin:1px 0;opacity:.9;max-width:90%;word-break:break-all;`;
+  el.textContent = label;
   chat.appendChild(el);
   chat.scrollTop = 99999;
+}
+
+// Wait for Web Speech voices to actually load (they are async on first call)
+function _waitForVoices(){
+  return new Promise(resolve=>{
+    const v = window.speechSynthesis.getVoices();
+    if(v.length > 0){ resolve(v); return; }
+    window.speechSynthesis.onvoiceschanged = ()=>{
+      const vv = window.speechSynthesis.getVoices();
+      if(vv.length > 0) resolve(vv);
+    };
+    setTimeout(()=>resolve(window.speechSynthesis.getVoices()), 2000);
+  });
+}
+
+// Pick the best available English voice — prefer Google neural > Microsoft neural > Apple > anything
+function _pickBestVoice(wantMale, allVoices){
+  const en = allVoices.filter(v=>v.lang&&v.lang.startsWith('en'));
+  if(!en.length) return allVoices[0]||null;
+
+  const malePriority  = ['Google US English','Microsoft Guy','Microsoft David','Microsoft Mark','Daniel','Alex','Aaron','Fred','Arthur'];
+  const femalePriority= ['Google UK English Female','Google US English Female','Microsoft Zira','Microsoft Hazel','Samantha','Victoria','Karen','Moira'];
+  const priority = wantMale ? malePriority : femalePriority;
+
+  for(const name of priority){
+    const found = en.find(v=>v.name===name||v.name.startsWith(name));
+    if(found) return found;
+  }
+  // Score remaining: prefer neural/enhanced/Google
+  const score = v=>{
+    let s=0;
+    if(v.name.includes('Google')) s+=100;
+    if(v.name.includes('Enhanced')||v.name.includes('Premium')||v.name.includes('Neural')) s+=60;
+    if(v.name.includes('Online')||!v.localService) s+=30;
+    if(v.lang==='en-US') s+=10;
+    return s;
+  };
+  return en.sort((a,b)=>score(b)-score(a))[0];
 }
 
 function stopSpeaking(){
@@ -384,57 +420,43 @@ async function _speakTTS(text, cb){
     const res = await fetch(TTS_URL, {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
-      body:JSON.stringify({
-        model:'tts-1',
-        input: text,
-        voice: voice,
-        response_format:'mp3',
-        speed: speed
-      })
+      body:JSON.stringify({ model:'tts-1', input:text, voice:voice, response_format:'mp3', speed:speed })
     });
-
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    if(!res.ok) throw new Error('HTTP '+res.status+' '+res.statusText);
     const blob = await res.blob();
-    if(blob.size < 100) throw new Error('empty audio blob');
+    if(blob.size < 100) throw new Error('Empty response ('+blob.size+' bytes)');
 
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     _currentAudio = audio;
-
-    _showVoiceBadge('🎙️ OpenAI TTS · '+voice, '#00a884', 'speed:'+speed);
+    _addBadge('🎙️ OpenAI TTS · '+voice+' · speed:'+speed, '#00a884');
 
     audio.onended = ()=>{
-      URL.revokeObjectURL(url);
-      _currentAudio=null; isSpeaking=false;
+      URL.revokeObjectURL(url); _currentAudio=null; isSpeaking=false;
       document.getElementById('buddyFace').classList.remove('speaking');
       setStatus('idle'); cb&&cb();
       if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
     };
-    audio.onerror = ()=>{
-      URL.revokeObjectURL(url);
-      _currentAudio=null;
-      _showVoiceBadge('⚠️ Audio play failed — using browser', '#f6ad55', '');
-      _speakFallback(text, cb);
-    };
-    audio.play().catch(e=>{
-      _showVoiceBadge('⚠️ Play blocked — using browser', '#f6ad55', e.message);
-      _speakFallback(text, cb);
-    });
+    audio.onerror = ()=>{ URL.revokeObjectURL(url); _currentAudio=null; _speakFallback(text,'Audio element error', cb); };
+    audio.play().catch(e=>{ _speakFallback(text,'play() blocked: '+e.message, cb); });
 
   }catch(e){
-    _showVoiceBadge('❌ TTS failed: '+e.message+' — using browser', '#e53e3e', '');
-    _speakFallback(text, cb);
+    _speakFallback(text, e.message||String(e), cb);
   }
 }
 
-function _speakFallback(text, cb){
-  const male=(persona==='casual'||persona==='academic');
-  const v=getVoice(male);
-  _showVoiceBadge('🤖 BROWSER VOICE (fallback)', '#718096', v ? v.name : 'no voice found');
+async function _speakFallback(text, reason, cb){
+  // Always show both: why TTS failed AND which browser voice is used
+  _addBadge('❌ TTS API: '+reason, '#e53e3e');
+
+  const allVoices = await _waitForVoices();
+  const wantMale = (persona==='casual'||persona==='academic');
+  const v = _pickBestVoice(wantMale, allVoices);
+  _addBadge('🤖 Browser fallback · '+(v?v.name:'no voice'), '#718096');
+
   const utt=new SpeechSynthesisUtterance(text);
-  if(v)utt.voice=v;
-  utt.pitch=P[persona].pitch; utt.rate=P[persona].rate;
-  utt.volume=1.0; utt.lang='en-US';
+  if(v) utt.voice=v;
+  utt.pitch=P[persona].pitch; utt.rate=P[persona].rate; utt.volume=1.0; utt.lang='en-US';
   utt.onend=()=>{
     isSpeaking=false;
     document.getElementById('buddyFace').classList.remove('speaking');
@@ -443,6 +465,7 @@ function _speakFallback(text, cb){
   };
   utt.onerror=(e)=>{
     if(e.error==='interrupted')return;
+    _addBadge('❌ Browser voice also failed: '+e.error,'#7b341e');
     isSpeaking=false;
     document.getElementById('buddyFace').classList.remove('speaking');
     setStatus('idle'); cb&&cb();
