@@ -238,6 +238,19 @@ window._fbReady=true;
 if(window._appReady)window._appReady();
 </script>
 
+<!-- Connect to official Kokoro-TTS HuggingFace Space in background -->
+<script type="module">
+import { Client } from 'https://esm.sh/@gradio/client@1.6.0';
+(async()=>{
+  try{
+    window._kokoroClient = await Client.connect('hexgrad/Kokoro-TTS');
+    console.log('✅ Kokoro HF Space ready');
+  }catch(e){
+    console.warn('Kokoro HF Space unavailable, using browser fallback:', e);
+  }
+})();
+</script>
+
 <script>
 // ── PERSONAS ──
 // voice: Kokoro voice ID  |  speed: base speaking speed (mode multiplier applied on top)
@@ -339,13 +352,13 @@ function getVoice(male){
 }
 
 // ── SPEAK ENGINE ──
-// Primary: api.kokorotts.com — free Kokoro API, no key, no download, HD quality
-// Fallback: Web Speech API if the free API is unreachable
-const KOKORO_API = 'https://api.kokorotts.com/v1/audio/speech';
-let _currentAudio = null; // track active HTMLAudioElement for stop support
+// Primary: HuggingFace hexgrad/Kokoro-TTS Space (real Kokoro, free, no download)
+//   window._kokoroClient is set by the module script above once connected
+// Fallback: Web Speech API
+let _currentAudio = null;
 
 function stopSpeaking(){
-  if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}  _currentAudio=null;}
+  if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){} _currentAudio=null;}
   window.speechSynthesis.cancel();
   isSpeaking=false;
   document.getElementById('buddyFace').classList.remove('speaking');
@@ -358,53 +371,43 @@ function speak(text, cb){
   stopSpeaking();
   isSpeaking=true; setStatus('speaking');
   document.getElementById('buddyFace').classList.add('speaking');
-  _speakAPI(clean, cb);
+  _speakKokoro(clean, cb);
 }
 
-async function _speakAPI(text, cb){
-  try{
-    const baseSpeed = P[persona].speed || 1.0;
-    const modeMulti = MODE_SPEED[mode] || 1.0;
-    const speed = +(baseSpeed * modeMulti).toFixed(2);
+async function _speakKokoro(text, cb){
+  const baseSpeed = P[persona].speed || 1.0;
+  const modeMulti = MODE_SPEED[mode] || 1.0;
+  const speed = +(baseSpeed * modeMulti).toFixed(2);
 
-    const res = await fetch(KOKORO_API, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'kokoro',
-        input: text,
+  // Try HuggingFace Kokoro Space
+  if(window._kokoroClient){
+    try{
+      const result = await window._kokoroClient.predict('/infer', {
+        text: text,
         voice: P[persona].voice,
-        response_format:'mp3',
-        speed: speed
-      })
-    });
-    if(!res.ok) throw new Error('API '+res.status);
+        speed: speed,
+        use_gpu: false
+      });
+      const audioData = result.data[0];
+      const audioUrl = audioData?.url || audioData;
+      if(!audioUrl) throw new Error('no audio url');
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    _currentAudio = audio;
-
-    audio.onended = ()=>{
-      URL.revokeObjectURL(url);
-      _currentAudio=null;
-      isSpeaking=false;
-      document.getElementById('buddyFace').classList.remove('speaking');
-      setStatus('idle'); cb&&cb();
-      if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
-    };
-    audio.onerror = ()=>{
-      URL.revokeObjectURL(url);
-      _currentAudio=null;
-      console.warn('Audio playback error, falling back');
-      _speakFallback(text, cb);
-    };
-    audio.play().catch(()=>_speakFallback(text, cb));
-
-  }catch(e){
-    console.warn('Kokoro API error, falling back:', e);
-    _speakFallback(text, cb);
+      const audio = new Audio(audioUrl);
+      _currentAudio = audio;
+      audio.onended = ()=>{
+        _currentAudio=null; isSpeaking=false;
+        document.getElementById('buddyFace').classList.remove('speaking');
+        setStatus('idle'); cb&&cb();
+        if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
+      };
+      audio.onerror = ()=>{ _currentAudio=null; _speakFallback(text, cb); };
+      await audio.play();
+      return;
+    }catch(e){
+      console.warn('Kokoro predict failed:', e);
+    }
   }
+  _speakFallback(text, cb);
 }
 
 function _speakFallback(text, cb){
