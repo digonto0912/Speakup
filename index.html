@@ -240,28 +240,28 @@ if(window._appReady)window._appReady();
 
 <script>
 // ── PERSONAS ──
-// voice: StreamElements/Amazon Polly voice name
-// am_michael / bf_emma / bm_george replaced with real Polly voices:
-//   Matthew = natural American male  |  Amy = warm British female
-//   Brian = deep British male (professor-like)
+// voice: OpenAI TTS voice via llm7.io (same free API already used for chat)
+//   echo  → warm, natural American male (Alex)
+//   nova  → warm, expressive female (Sarah)
+//   onyx  → deep, authoritative male (James)
 const P={
   casual:{
     name:"Alex",emoji:"🧑",
-    voice:"Matthew", speed:1.08,
-    pitch:1.0,rate:0.92,
+    voice:"echo", speed:1.08,
+    pitch:1.0,rate:0.95,
     style:`a real male best friend. Warm, funny, genuine. You share YOUR thoughts. You react to what he says. You NEVER say sorry or act like an assistant. You talk like someone who genuinely knows and likes this person.`,
     openers:["Yo, what's good? Something on your mind?","Bro I was just thinking — you ever feel like time moves too fast? What about you?","Okay real talk — how are you actually doing today?","Man, I've been meaning to ask you something. What's one thing you want to change about your life right now?"]
   },
   professional:{
     name:"Sarah",emoji:"👩",
-    voice:"Amy", speed:0.95,
+    voice:"nova", speed:0.95,
     pitch:1.08,rate:0.9,
     style:`a warm, sharp British woman. Encouraging but direct. You push people to be better without being harsh. Never apologize unnecessarily.`,
     openers:["Right, let's work. What do you want to get better at today?","I've been thinking — what's the one thing stopping you from speaking English confidently?","Okay, challenge time. Tell me about yourself in English. Go."]
   },
   academic:{
     name:"James",emoji:"🎓",
-    voice:"Brian", speed:0.88,
+    voice:"onyx", speed:0.88,
     pitch:0.92,rate:0.87,
     style:`a calm, thoughtful professor. You speak slowly and clearly. You open deep topics. You make people feel intelligent. Never generic.`,
     openers:["What do you believe makes a person truly successful — not just rich, but successful?","Let's talk about something real. What's one thing you're afraid to say in English?","You know the best way to improve is to think in English. So — what are you thinking about right now?"]
@@ -340,9 +340,9 @@ function getVoice(male){
 }
 
 // ── SPEAK ENGINE ──
-// StreamElements TTS — Amazon Polly voices, free, no key, CORS-friendly
-// Matthew (US male) · Amy (British female) · Brian (British male)
-const SE_BASE = 'https://api.streamelements.com/kappa/v2/speech';
+// llm7.io /v1/audio/speech — same free API used for chat, OpenAI-quality voices
+// echo (warm male) · nova (warm female) · onyx (deep male)
+const TTS_URL = 'https://api.llm7.io/v1/audio/speech';
 let _currentAudio = null;
 
 function _showVoiceBadge(label, color, detail){
@@ -371,33 +371,84 @@ function speak(text, cb){
   stopSpeaking();
   isSpeaking=true; setStatus('speaking');
   document.getElementById('buddyFace').classList.add('speaking');
-  _speakSE(clean, cb);
+  _speakTTS(clean, cb);
 }
 
-async function _speakSE(text, cb){
-  try{
-    const voice = P[persona].voice;
-    const url = `${SE_BASE}?voice=${voice}&text=${encodeURIComponent(text)}`;
-    _showVoiceBadge('🎙️ AMAZON POLLY via StreamElements', '#00a884', `voice: ${voice}`);
+async function _speakTTS(text, cb){
+  const voice = P[persona].voice;
+  const baseSpeed = P[persona].speed || 1.0;
+  const modeMulti = MODE_SPEED[mode] || 1.0;
+  const speed = +(baseSpeed * modeMulti).toFixed(2);
 
+  try{
+    const res = await fetch(TTS_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer unused'},
+      body:JSON.stringify({
+        model:'tts-1',
+        input: text,
+        voice: voice,
+        response_format:'mp3',
+        speed: speed
+      })
+    });
+
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const blob = await res.blob();
+    if(blob.size < 100) throw new Error('empty audio blob');
+
+    const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     _currentAudio = audio;
+
+    _showVoiceBadge('🎙️ OpenAI TTS · '+voice, '#00a884', 'speed:'+speed);
+
     audio.onended = ()=>{
+      URL.revokeObjectURL(url);
       _currentAudio=null; isSpeaking=false;
       document.getElementById('buddyFace').classList.remove('speaking');
       setStatus('idle'); cb&&cb();
       if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
     };
-    audio.onerror = (e)=>{
+    audio.onerror = ()=>{
+      URL.revokeObjectURL(url);
       _currentAudio=null;
-      _showVoiceBadge('❌ StreamElements failed — using browser', '#e53e3e', String(e.message||e));
+      _showVoiceBadge('⚠️ Audio play failed — using browser', '#f6ad55', '');
       _speakFallback(text, cb);
     };
-    await audio.play();
+    audio.play().catch(e=>{
+      _showVoiceBadge('⚠️ Play blocked — using browser', '#f6ad55', e.message);
+      _speakFallback(text, cb);
+    });
+
   }catch(e){
-    _showVoiceBadge('❌ StreamElements error — using browser', '#e53e3e', e.message||String(e));
+    _showVoiceBadge('❌ TTS failed: '+e.message+' — using browser', '#e53e3e', '');
     _speakFallback(text, cb);
   }
+}
+
+function _speakFallback(text, cb){
+  const male=(persona==='casual'||persona==='academic');
+  const v=getVoice(male);
+  _showVoiceBadge('🤖 BROWSER VOICE (fallback)', '#718096', v ? v.name : 'no voice found');
+  const utt=new SpeechSynthesisUtterance(text);
+  if(v)utt.voice=v;
+  utt.pitch=P[persona].pitch; utt.rate=P[persona].rate;
+  utt.volume=1.0; utt.lang='en-US';
+  utt.onend=()=>{
+    isSpeaking=false;
+    document.getElementById('buddyFace').classList.remove('speaking');
+    setStatus('idle'); cb&&cb();
+    if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
+  };
+  utt.onerror=(e)=>{
+    if(e.error==='interrupted')return;
+    isSpeaking=false;
+    document.getElementById('buddyFace').classList.remove('speaking');
+    setStatus('idle'); cb&&cb();
+  };
+  setTimeout(()=>window.speechSynthesis.speak(utt),80);
+  const ka=setInterval(()=>{if(!isSpeaking){clearInterval(ka);return;}if(window.speechSynthesis.paused)window.speechSynthesis.resume();},8000);
 }
 
 function _speakFallback(text, cb){
