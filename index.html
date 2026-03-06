@@ -245,8 +245,23 @@ import { Client } from 'https://esm.sh/@gradio/client@1.6.0';
   try{
     window._kokoroClient = await Client.connect('hexgrad/Kokoro-TTS');
     console.log('✅ Kokoro HF Space ready');
+    // Show in chat
+    const chat = document.getElementById('chat');
+    if(chat){
+      const b=document.createElement('div');
+      b.style.cssText='align-self:center;background:#00a884;color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;';
+      b.textContent='✅ KOKORO HD VOICE READY';
+      chat.appendChild(b); chat.scrollTop=99999;
+    }
   }catch(e){
     console.warn('Kokoro HF Space unavailable, using browser fallback:', e);
+    const chat = document.getElementById('chat');
+    if(chat){
+      const b=document.createElement('div');
+      b.style.cssText='align-self:center;background:#e53e3e;color:#fff;font-size:.62rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;';
+      b.textContent='❌ KOKORO FAILED: '+( e.message||String(e));
+      chat.appendChild(b); chat.scrollTop=99999;
+    }
   }
 })();
 </script>
@@ -357,6 +372,20 @@ function getVoice(male){
 // Fallback: Web Speech API
 let _currentAudio = null;
 
+// Debug badge shown in chat so you can see exactly which voice is used
+function _showVoiceBadge(label, color, detail){
+  const chat = document.getElementById('chat');
+  const old = document.getElementById('voice-badge');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'voice-badge';
+  el.style.cssText = `align-self:center;background:${color};color:#fff;font-size:.62rem;font-weight:800;
+    padding:3px 10px;border-radius:20px;letter-spacing:.5px;margin:2px 0;opacity:.85;`;
+  el.textContent = label + (detail ? '  · ' + detail : '');
+  chat.appendChild(el);
+  chat.scrollTop = 99999;
+}
+
 function stopSpeaking(){
   if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){} _currentAudio=null;}
   window.speechSynthesis.cancel();
@@ -382,6 +411,7 @@ async function _speakKokoro(text, cb){
   // Try HuggingFace Kokoro Space
   if(window._kokoroClient){
     try{
+      _showVoiceBadge('🎙️ KOKORO HD', '#00a884', `voice:${P[persona].voice}  speed:${speed}`);
       const result = await window._kokoroClient.predict('/infer', {
         text: text,
         voice: P[persona].voice,
@@ -400,12 +430,18 @@ async function _speakKokoro(text, cb){
         setStatus('idle'); cb&&cb();
         if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
       };
-      audio.onerror = ()=>{ _currentAudio=null; _speakFallback(text, cb); };
+      audio.onerror = (err)=>{
+        _showVoiceBadge('⚠️ KOKORO AUDIO ERROR — falling back', '#e53e3e', String(err));
+        _currentAudio=null; _speakFallback(text, cb);
+      };
       await audio.play();
       return;
     }catch(e){
+      _showVoiceBadge('❌ KOKORO FAILED — falling back', '#e53e3e', e.message||String(e));
       console.warn('Kokoro predict failed:', e);
     }
+  } else {
+    _showVoiceBadge('⏳ KOKORO NOT CONNECTED YET — robot fallback', '#f6ad55', 'window._kokoroClient = ' + window._kokoroClient);
   }
   _speakFallback(text, cb);
 }
@@ -413,6 +449,7 @@ async function _speakKokoro(text, cb){
 function _speakFallback(text, cb){
   const male=(persona==='casual'||persona==='academic');
   const v=getVoice(male);
+  _showVoiceBadge('🤖 BROWSER VOICE (fallback)', '#718096', v ? v.name : 'no voice found');
   const utt=new SpeechSynthesisUtterance(text);
   if(v)utt.voice=v;
   utt.pitch=P[persona].pitch; utt.rate=P[persona].rate;
