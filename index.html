@@ -165,50 +165,10 @@ body{font-family:'Nunito',sans-serif;color:#e9edef;display:flex;flex-direction:c
 .stat-mini span{color:#00a884;font-weight:700}
 
 .ghost-bubble{opacity:.4;font-style:italic}
-
-/* ── LOADER SCREEN ── */
-#loader{
-  position:fixed;inset:0;z-index:9999;
-  background:#111b21;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:0;
-}
-#loader.hidden{opacity:0;pointer-events:none;transition:opacity .5s ease;}
-.ld-logo{
-  width:72px;height:72px;border-radius:50%;
-  background:linear-gradient(135deg,#00a884,#025c4c);
-  display:flex;align-items:center;justify-content:center;
-  font-size:2rem;margin-bottom:22px;
-  box-shadow:0 0 32px rgba(0,168,132,0.4);
-  animation:ldPulse 2s infinite ease-in-out;
-}
-@keyframes ldPulse{0%,100%{box-shadow:0 0 32px rgba(0,168,132,0.4)}50%{box-shadow:0 0 52px rgba(0,168,132,0.7)}}
-.ld-title{font-size:1.4rem;font-weight:800;color:#e9edef;margin-bottom:6px;letter-spacing:.5px}
-.ld-sub{font-size:.75rem;color:#8696a0;margin-bottom:32px;text-align:center;line-height:1.5;padding:0 32px}
-.ld-bar-wrap{width:220px;height:6px;background:#2a3942;border-radius:3px;overflow:hidden;margin-bottom:10px}
-.ld-bar{height:100%;width:0%;background:linear-gradient(90deg,#00a884,#4ade80);border-radius:3px;transition:width .3s ease}
-.ld-pct{font-size:.7rem;color:#00a884;font-weight:700;letter-spacing:.5px}
-.ld-step{font-size:.65rem;color:#8696a0;margin-top:6px}
-
-/* App hidden until loader done */
-#app{opacity:0;transition:opacity .5s ease;}
-#app.ready{opacity:1;}
 </style>
 </head>
 <body>
 
-<!-- ── LOADING SCREEN — shown until Kokoro TTS is fully ready ── -->
-<div id="loader">
-  <div class="ld-logo">🎙️</div>
-  <div class="ld-title">Buddy</div>
-  <div class="ld-sub">Loading high-quality voice engine.<br>This is a one-time download (~85MB).<br>Cached forever after first load.</div>
-  <div class="ld-bar-wrap"><div class="ld-bar" id="ldBar"></div></div>
-  <div class="ld-pct" id="ldPct">0%</div>
-  <div class="ld-step" id="ldStep">Initializing…</div>
-</div>
-
-<!-- ── MAIN APP — hidden until loader done ── -->
-<div id="app">
 
 <div class="top-bar">
   <div class="buddy-pill">
@@ -274,82 +234,8 @@ window._db=db;window._col=collection;window._add=addDoc;window._ts=serverTimesta
 window._sid=localStorage.getItem('buddy_sid');
 if(!window._sid){window._sid='u_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);localStorage.setItem('buddy_sid',window._sid);}
 window._log=async(role,text,p,m)=>{try{await _add(_col(_db,'messages'),{sessionId:_sid,role,text,persona:p,mode:m,timestamp:_ts()});}catch(e){}};
-// Firebase is ready — but we DON'T init the app yet.
-// The Kokoro loader controls when to call init() via _appReady.
 window._fbReady=true;
-</script>
-
-<script type="module">
-import { KokoroTTS } from 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.2/dist/kokoro.web.js';
-
-window._kokoroReady = false;
-window._tts = null;
-window._audioCtx = null;
-window._currentSrc = null;
-
-function getAudioCtx(){
-  if(!window._audioCtx || window._audioCtx.state==='closed'){
-    window._audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  }
-  return window._audioCtx;
-}
-window._getAudioCtx = getAudioCtx;
-
-function setLoadUI(pct, step){
-  const bar = document.getElementById('ldBar');
-  const pctEl = document.getElementById('ldPct');
-  const stepEl = document.getElementById('ldStep');
-  if(bar) bar.style.width = pct + '%';
-  if(pctEl) pctEl.textContent = Math.round(pct) + '%';
-  if(stepEl) stepEl.textContent = step || '';
-}
-
-function revealApp(){
-  const loader = document.getElementById('loader');
-  const app = document.getElementById('app');
-  loader.classList.add('hidden');
-  app.classList.add('ready');
-  setTimeout(()=>{
-    loader.style.display='none';
-    // Call init — _appReady is set by the main script block
-    if(window._appReady) window._appReady();
-  }, 550);
-}
-
-(async()=>{
-  try{
-    setLoadUI(2, 'Connecting to voice model…');
-
-    window._tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0',{
-      dtype: 'q8',
-      progress_callback:(p)=>{
-        if(p.status === 'initiate'){
-          setLoadUI(5, `Starting: ${p.file||'model'}…`);
-        } else if(p.status === 'download'){
-          setLoadUI(8, `Downloading voice model…`);
-        } else if(p.status === 'progress'){
-          // Progress comes per-file; map it to 10–90% range
-          const pct = 10 + ((p.progress||0) * 0.80);
-          setLoadUI(pct, `Loading voice model… ${Math.round(p.progress||0)}%`);
-        } else if(p.status === 'done'){
-          setLoadUI(92, 'Finalizing voice engine…');
-        }
-      }
-    });
-
-    window._kokoroReady = true;
-    setLoadUI(100, '✅ Voice ready!');
-
-    // Small pause so user sees 100%
-    setTimeout(()=> revealApp(), 600);
-
-  } catch(e){
-    console.warn('Kokoro failed, using browser voice:', e);
-    window._kokoroReady = false;
-    setLoadUI(100, '⚠️ Using system voice (HD unavailable)');
-    setTimeout(()=> revealApp(), 800);
-  }
-})();
+if(window._appReady)window._appReady();
 </script>
 
 <script>
@@ -452,69 +338,71 @@ function getVoice(male){
   return voices.find(v=>v.lang&&v.lang.startsWith('en'))||voices[0]||null;
 }
 
-// ── SPEAK (Kokoro HD TTS engine) ──
-// Primary: Kokoro ONNX (am_michael / bf_emma / bm_george) — free, unlimited, ElevenLabs-quality
-// Fallback: Web Speech API if Kokoro hasn't loaded yet
+// ── SPEAK ENGINE ──
+// Primary: api.kokorotts.com — free Kokoro API, no key, no download, HD quality
+// Fallback: Web Speech API if the free API is unreachable
+const KOKORO_API = 'https://api.kokorotts.com/v1/audio/speech';
+let _currentAudio = null; // track active HTMLAudioElement for stop support
+
+function stopSpeaking(){
+  if(_currentAudio){try{_currentAudio.pause();_currentAudio.src='';}catch(e){}  _currentAudio=null;}
+  window.speechSynthesis.cancel();
+  isSpeaking=false;
+  document.getElementById('buddyFace').classList.remove('speaking');
+}
+
 function speak(text, cb){
   if(!text){cb&&cb();return;}
   const clean=text.replace(/\[CORRECTION:.*?\]/gs,'').replace(/\[REPORT:.*?\]/gs,'').replace(/[*_#\[\]]/g,'').replace(/\s+/g,' ').trim();
   if(!clean){cb&&cb();return;}
-
-  window.speechSynthesis.cancel();
+  stopSpeaking();
   isSpeaking=true; setStatus('speaking');
   document.getElementById('buddyFace').classList.add('speaking');
-
-  if(window._kokoroReady && window._tts){
-    _speakKokoro(clean, cb);
-  } else {
-    _speakFallback(clean, cb);
-    // Also set a listener so next speak() uses Kokoro once ready
-    if(!window._onKokoroReady){
-      window._onKokoroReady=()=>{ /* ready for next call */ };
-    }
-  }
+  _speakAPI(clean, cb);
 }
 
-async function _speakKokoro(text, cb){
+async function _speakAPI(text, cb){
   try{
-    // Compute final speed: persona base × mode multiplier
     const baseSpeed = P[persona].speed || 1.0;
     const modeMulti = MODE_SPEED[mode] || 1.0;
     const speed = +(baseSpeed * modeMulti).toFixed(2);
 
-    // Generate audio with Kokoro
-    const result = await window._tts.generate(text,{
-      voice: P[persona].voice,
-      speed: speed
+    const res = await fetch(KOKORO_API, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'kokoro',
+        input: text,
+        voice: P[persona].voice,
+        response_format:'mp3',
+        speed: speed
+      })
     });
+    if(!res.ok) throw new Error('API '+res.status);
 
-    // Resume AudioContext (required for iOS/mobile after user gesture)
-    const ctx = window._getAudioCtx();
-    if(ctx.state==='suspended') await ctx.resume();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    _currentAudio = audio;
 
-    // Build and play AudioBuffer
-    const buf = ctx.createBuffer(1, result.audio.length, result.sampling_rate);
-    buf.getChannelData(0).set(result.audio);
-
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-
-    // Store reference so we can stop mid-speech
-    window._currentSrc = src;
-
-    src.onended = ()=>{
-      window._currentSrc = null;
+    audio.onended = ()=>{
+      URL.revokeObjectURL(url);
+      _currentAudio=null;
       isSpeaking=false;
       document.getElementById('buddyFace').classList.remove('speaking');
       setStatus('idle'); cb&&cb();
       if(!typeMode&&!isLoading) setTimeout(()=>startListening(),700);
     };
-
-    src.start(0);
+    audio.onerror = ()=>{
+      URL.revokeObjectURL(url);
+      _currentAudio=null;
+      console.warn('Audio playback error, falling back');
+      _speakFallback(text, cb);
+    };
+    audio.play().catch(()=>_speakFallback(text, cb));
 
   }catch(e){
-    console.warn('Kokoro speak error, falling back:', e);
+    console.warn('Kokoro API error, falling back:', e);
     _speakFallback(text, cb);
   }
 }
@@ -617,24 +505,9 @@ function startListening(){
   }
 }
 
-function stopSpeaking(){
-  // Stop Kokoro audio
-  if(window._currentSrc){try{window._currentSrc.stop();}catch(e){}window._currentSrc=null;}
-  // Stop Web Speech fallback
-  window.speechSynthesis.cancel();
-  isSpeaking=false;
-  document.getElementById('buddyFace').classList.remove('speaking');
-}
 function toggleMic(){
   // First tap unlocks mic (required for mobile gesture policy)
-  if(!micUnlocked){
-    micUnlocked=true;
-    // Also resume AudioContext for iOS — must happen inside user gesture
-    try{
-      const ctx=window._getAudioCtx();
-      if(ctx.state==='suspended') ctx.resume();
-    }catch(e){}
-  }
+  if(!micUnlocked) micUnlocked=true;
   if(isSpeaking){stopSpeaking();setStatus('idle');setTimeout(()=>startListening(),300);return;}
   if(isListening){recognition&&recognition.stop();return;}
   if(isLoading)return;
@@ -1002,12 +875,8 @@ document.getElementById('userInput').addEventListener('input',function(){this.st
 document.getElementById('userInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendTyped();}});
 
 // ── INIT ──
-// Called by Kokoro loader once HD voice is ready (and Firebase is up)
 function init(){if(!loadSession())startConvo();else setStatus('idle');}
-window._appReady = init;  // Kokoro loader calls this after loading screen
-// Fallback: if somehow Firebase fires init before loader (shouldn't happen but safe)
-window._fbInit = ()=>{ /* wait for Kokoro loader to call _appReady */ };
+window._appReady = init;
 </script>
-</div><!-- /#app -->
 </body>
 </html>
